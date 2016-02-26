@@ -7,7 +7,7 @@ import ConfigParser
 import traceback
 from SocketServer import ThreadingMixIn
 
-VERSION='1.0.3'
+VERSION='1.0.4'
 
 fragments={}
 counter=1
@@ -136,10 +136,12 @@ t.start()
 
 
 while True:
+	fragments={}
 	icyint=0
 	icyread=0
 	icylist={}
 	icyheaders={}
+	icynbstart=0
 	try:
 		if GETMETADATA:
 			stream=urllib2.urlopen(urllib2.Request(STREAMURL,headers={'Icy-MetaData':'1','User-Agent':'DiStreamer/'+VERSION}), timeout=HTTPTIMEOUT)
@@ -156,21 +158,25 @@ while True:
 				raise ValueError("Incomplete read of block")
 			idx=counter
 			if icyint>0:
-				if len(fragment)<icyint-icyread:
-					icyread=icyread+len(fragment)
+				if FRAGMENTSIZE<icyint-icyread:
+					icyread=icyread+FRAGMENTSIZE
 				else:
-					x=0
-					while x<len(fragment):
+					if icynbstart>0:
+						x=icynbstart
+					else:
+						x=0
+					icynbstart=0
+					while x<FRAGMENTSIZE:
 						if icyread==icyint:
 							icylen=ord(fragment[x])*16+1
-							icytblock=idx
 							icytpos=x+icylen
-							if icytpos>len(fragment):
-								icyblock=idx+1
-								icypos=icytpos-len(fragment)
-							else:
-								icyblock=idx
-								icypos=icytpos
+							icytblock=idx
+							while icytpos>FRAGMENTSIZE:
+								icytblock=icytblock+1
+								icytpos=icytpos-FRAGMENTSIZE
+								icynbstart=icytpos+1
+							icyblock=icytblock
+							icypos=icytpos
 							if not icylist.has_key(icyblock):
 								icylist[icyblock]=[]
 							icylist[icyblock].append(icypos)

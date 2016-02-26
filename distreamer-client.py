@@ -7,7 +7,7 @@ import ConfigParser
 import traceback
 from SocketServer import ThreadingMixIn
 
-VERSION='1.0.3'
+VERSION='1.0.4'
 
 fragments={}
 reconnect=0
@@ -88,6 +88,8 @@ class distreamerServerHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 				except:
 					time.sleep(1)
 					pass
+		else:
+			lastsent=min(fragments.keys())-1
 		while True:
 			try:
 				if locreconnect!=reconnect or reconnect<=0:
