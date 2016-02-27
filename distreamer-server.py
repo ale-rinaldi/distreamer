@@ -7,7 +7,7 @@ import ConfigParser
 import traceback
 from SocketServer import ThreadingMixIn
 
-VERSION='1.0.4'
+VERSION='1.1.0'
 
 fragments={}
 counter=1
@@ -52,7 +52,7 @@ class ThreadingSimpleServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
     pass
 
 class distreamerServerHandler(BaseHTTPServer.BaseHTTPRequestHandler):
-	global fragments, DEBUG, icylist, icyheaders, reconnect
+	global fragments, DEBUG, icylist, icyheaders, reconnect, icytitle
 	def do_HEAD(s):
 		try:
 			if(s.path=='/list'):
@@ -87,7 +87,8 @@ class distreamerServerHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 				tmplist=[]
 				for metaidx in icyheaders:
 					tmplist.append(metaidx+':'+icyheaders[metaidx])
-				tosend=tosend+','.join(tmplist)+'|'+str(reconnect)
+				tosend=tosend+','.join(tmplist)+'|'+str(reconnect)+'|'
+				tosend=tosend+icytitle
 				s.send_header("Content-Length", str(len(tosend)))
 				s.end_headers()
 				s.wfile.write(tosend)
@@ -142,6 +143,10 @@ while True:
 	icylist={}
 	icyheaders={}
 	icynbstart=0
+	icyreadfromblock=0
+	icyreadingtitle=False
+	icytemptitle=""
+	icytitle=""
 	try:
 		if GETMETADATA:
 			stream=urllib2.urlopen(urllib2.Request(STREAMURL,headers={'Icy-MetaData':'1','User-Agent':'DiStreamer/'+VERSION}), timeout=HTTPTIMEOUT)
@@ -158,9 +163,15 @@ while True:
 				raise ValueError("Incomplete read of block")
 			idx=counter
 			if icyint>0:
-				if FRAGMENTSIZE<icyint-icyread:
-					icyread=icyread+FRAGMENTSIZE
-				else:
+				if idx==icyreadfromblock:
+					icytemptitle=icytemptitle+fragment[:icynbstart-1]
+					icyreadingtitle=False
+				if not icyreadingtitle and icytemptitle!='':
+					icytitle=icytemptitle
+					icytemptitle=""
+				if idx<icyreadfromblock and icyreadingtitle:
+					icytemptitle=icytemptitle+fragment
+				if idx>=icyreadfromblock:
 					if icynbstart>0:
 						x=icynbstart
 					else:
@@ -169,14 +180,23 @@ while True:
 					while x<FRAGMENTSIZE:
 						if icyread==icyint:
 							icylen=ord(fragment[x])*16+1
+							icystart=x+1
 							icytpos=x+icylen
 							icytblock=idx
-							while icytpos>FRAGMENTSIZE:
+							while icytpos>=FRAGMENTSIZE:
 								icytblock=icytblock+1
 								icytpos=icytpos-FRAGMENTSIZE
 								icynbstart=icytpos+1
 							icyblock=icytblock
 							icypos=icytpos
+							icyreadfromblock=icyblock
+							if icylen>1:
+								if icyblock==idx:
+									icyreadingtitle=False
+									icytemptitle=fragment[icystart:icypos]
+								else:
+									icyreadingtitle=True
+									icytemptitle=fragment[icystart:]
 							if not icylist.has_key(icyblock):
 								icylist[icyblock]=[]
 							icylist[icyblock].append(icypos)

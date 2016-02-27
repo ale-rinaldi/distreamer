@@ -7,7 +7,7 @@ import ConfigParser
 import traceback
 from SocketServer import ThreadingMixIn
 
-VERSION='1.0.4'
+VERSION='1.1.0'
 
 fragments={}
 reconnect=0
@@ -46,7 +46,7 @@ class ThreadingSimpleServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
     pass
 
 class distreamerServerHandler(BaseHTTPServer.BaseHTTPRequestHandler):
-	global fragments, DEBUG, icyint, icyheaders, reconnect
+	global fragments, DEBUG, icyint, icyheaders, reconnect, icytitle
 	def do_HEAD(s):
 		s.send_response(200)
 		s.send_header("Server", "DiStreamer/"+VERSION)
@@ -71,6 +71,11 @@ class distreamerServerHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		if icyint>0:
 			if locreconnect!=reconnect or reconnect<=0:
 				return None
+			if icytitle!='':
+				s.wfile.write(''.join(chr(255) for i in xrange(icyint)))
+				chridx=len(icytitle)/16
+				s.wfile.write(chr(chridx))
+				s.wfile.write(icytitle)
 			while not firstsent:
 				try:
 					locallist=fragments.keys()
@@ -139,6 +144,7 @@ t.start()
 
 icyint=0
 icylist={}
+icytitle=""
 icyheaders={}
 while True:
 	try:
@@ -166,6 +172,7 @@ while True:
 			tmplist[key]=val
 		icyheaders=tmplist
 		reconnect=int(infolist[4])
+		icytitle=infolist[5]
 		cslist=infolist[0]
 		slist=cslist.split(',')
 		list=map(int,slist)
