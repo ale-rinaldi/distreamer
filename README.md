@@ -1,4 +1,4 @@
-# DiStreamer 1.0.4
+# DiStreamer 1.1.0
 DiStreamer is a simple Python script specifically designed to stream audio over unstable connections, making its best to avoid "holes" in sound. To achieve this, it splits data into a set of pieces of a given size.  
 It is composed by a client and a server.  
 
