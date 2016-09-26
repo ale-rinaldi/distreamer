@@ -7,34 +7,34 @@ class ShoutcastClient():
 		Store will contain sourcegen, fragments, icyint, icylist, icyheaders and icytitle
 		'''
 		self.logger=logger
-		self.counter=1
-		self.reconnect=1
 		self.config_set=False
+		self.isclosing=False
 		
 
 	def getDefaultConfig(self):
 		return {
-			'STREAMURL': '',
-			'FRAGMENTSNUMBER': 5,
-			'FRAGMENTSIZE': 81920,
-			'GETMETADATA': True,
-			'HTTPTIMEOUT': 5,
+			'streamurl': '',
+			'fragmentsnumber': 5,
+			'fragmentsize': 81920,
+			'getmetadata': True,
+			'httptimeout': 5,
 		}
 	
-	def setConfig(self):
+	def setConfig(self,config):
 		self.config=config
 		self.config_set=True
 
 	def run(self):
-		if self.conf['STREAMURL']=='':
+		if not self.config_set:
 			raise ValueError("Configuration not set")
 
-		if self.conf['STREAMURL']=='':
+		if self.config['streamurl']=='':
 			raise ValueError("Stream URL not defined")
 
 		self.store.incrementSourceGen()
 		self.store.reset()
 		
+		counter=1
 		icyread=0
 		icynbstart=0
 		icyreadfromblock=0
@@ -45,21 +45,22 @@ class ShoutcastClient():
 		icylist=self.store.getIcyList()
 		icyheaders=self.store.getIcyHeaders()
 		
-		if self.config['GETMETADATA']:
-			stream=urllib2.urlopen(urllib2.Request(self.conf['STREAMURL'],headers={'Icy-MetaData':'1','User-Agent':'DiStreamer/'+VERSION}), timeout=HTTPTIMEOUT)
+		self.logger.log("Connecting to stream: "+self.config['streamurl'],'ShoutcastClient',3)
+		if self.config['getmetadata']:
+			stream=urllib2.urlopen(urllib2.Request(self.config['streamurl'],headers={'Icy-MetaData':'1','User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
 			if stream.headers.has_key('icy-metaint'):
 				self.store.setIcyInt(int(stream.headers['icy-metaint']))
 			for metaidx in stream.headers.keys():
 				if ( metaidx[:4]=='icy-' and metaidx!='icy-metaint' ) or metaidx.lower()=='content-type':
 					icyheaders[metaidx]=stream.headers[metaidx]
 		else:
-			stream=urllib2.urlopen(urllib2.Request(self.conf['STREAMURL'],headers={'User-Agent':'DiStreamer/'+VERSION}), timeout=HTTPTIMEOUT)
-		
+			stream=urllib2.urlopen(urllib2.Request(self.config['streamurl'],headers={'User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
+		self.logger.log("Connected to stream",'ShoutcastClient',3)
 		self.store.setIcyHeaders(icyheaders)
 		
-		while True:
-			fragment=stream.read(self.conf['FRAGMENTSIZE'])
-			if len(fragment)!=self.conf['FRAGMENTSIZE']:
+		while not self.isclosing:
+			fragment=stream.read(self.config['fragmentsize'])
+			if len(fragment)!=self.config['fragmentsize']:
 				raise ValueError("Incomplete read of block")
 			idx=counter
 			if self.store.getIcyInt()>0:
@@ -77,15 +78,15 @@ class ShoutcastClient():
 					else:
 						x=0
 					icynbstart=0
-					while x<self.conf['FRAGMENTSIZE']:
+					while x<self.config['fragmentsize']:
 						if icyread==self.store.getIcyInt():
 							icylen=ord(fragment[x])*16+1
 							icystart=x+1
 							icytpos=x+icylen
 							icytblock=idx
-							while icytpos>=self.conf['FRAGMENTSIZE']:
+							while icytpos>=self.config['fragmentsize']:
 								icytblock=icytblock+1
-								icytpos=icytpos-self.conf['FRAGMENTSIZE']
+								icytpos=icytpos-self.config['fragmentsize']
 								icynbstart=icytpos+1
 							icyblock=icytblock
 							icypos=icytpos
@@ -106,13 +107,17 @@ class ShoutcastClient():
 						x=x+1
 			counter=counter+1
 			fragments[idx]=fragment
-			self.logger.log("Created fragment "+str(idx),2)
-			while len(fragments)>self.conf['FRAGMENTSNUMBER']:
+			self.logger.log("Created fragment "+str(idx),'ShoutcastClient',3)
+			while len(fragments)>self.config['fragmentsnumber']:
 				todelete=min(fragments.keys())
 				del fragments[todelete]
 				if icylist.has_key(todelete):
 					del icylist[todelete]
-				print str("Deleted fragment "+str(todelete),2)
+				self.logger.log("Deleted fragment "+str(todelete),'ShoutcastClient',3)
 			
 			self.store.setFragments(fragments)
 			self.store.setIcyList(icylist)
+		self.logger.log('ShoutcastClient terminated normally','ShoutcastClient',2)
+		
+	def close(self):
+		self.isclosing=True

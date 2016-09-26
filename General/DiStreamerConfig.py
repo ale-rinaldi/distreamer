@@ -1,17 +1,15 @@
+import sys
 from ConfigParser import ConfigParser
 
 ''' TODO: check configuration options and stop if something is missing or invalid '''
-class DiStreamerConfig(self):
+class DiStreamerConfig:
 	def __init__(self):
-		try:
-			config = ConfigParser()
-			if len(sys.argv)>1:
-				configfile=sys.argv[1]
-			else:
-				configfile='distreamer.conf'
-			config.read([configfile])
-		except:
-			raise ValueError('Unable to read configuration file '+configfile)
+		config = ConfigParser()
+		if len(sys.argv)>1:
+			configfile=sys.argv[1]
+		else:
+			configfile='distreamer.conf'
+		config.read([configfile])
 		self.config=config
 
 	def getGeneralConfig(self):
@@ -22,7 +20,7 @@ class DiStreamerConfig(self):
 		
 	def getInputConfig(self,defaults):
 		inconfig=dict(self.config.items('INPUT'))
-		del inconfig['MODE']
+		del inconfig['mode']
 		for key in defaults:
 			if inconfig.has_key(key):
 				defaults[key]=inconfig[key]
@@ -30,7 +28,7 @@ class DiStreamerConfig(self):
 
 	def getOutputConfig(self,defaults):
 		outconfig=dict(self.config.items('OUTPUT'))
-		del outconfig['MODE']
+		del outconfig['mode']
 		for key in defaults:
 			if outconfig.has_key(key):
 				defaults[key]=inconfig[key]

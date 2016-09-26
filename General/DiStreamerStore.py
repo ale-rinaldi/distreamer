@@ -1,38 +1,50 @@
-class DiStreamerStore():
+class DiStreamerStore:
 	def __init__(self):
 		self.sourcegen=0
 		self.reset()
 
-	def reset():
+	def reset(self):
 		self.fragments={}
 		self.icylist={}
 		self.icyheaders={}
 		self.icyint=0
 		self.icytitle=''
 
-	def getFragments():
+	def getFragments(self):
 		return self.fragments
 
-	def setFragments(fragments):
+	def setFragments(self,fragments):
 		self.fragments=fragments
 
-	def getIcyList():
+	def getIcyList(self):
 		return self.icylist
 
-	def setIcyList(icylist):
+	def setIcyList(self,icylist):
 		self.icylist=icylist
 
-	def getIcyHeaders():
+	def getIcyHeaders(self):
 		return self.icyheaders
 
-	def setIcyHeaders(icyheaders):
+	def setIcyHeaders(self,icyheaders):
 		self.icyheaders=icyheaders
 
-	def getIcyInt():
+	def getIcyInt(self):
 		return self.icyint
 
-	def setIcyInt(icyint):
+	def setIcyInt(self,icyint):
 		self.icyint=icyint
 
-	def incrementSourceGen():
+	def getIcyTitle(self):
+		return self.icytitle
+
+	def setIcyTitle(self,icytitle):
+		self.icytitle=icytitle
+		
+	def getSourceGen(self):
+		return self.sourcegen
+
+	def setSourceGen(self,sourcegen):
+		self.sourcegen=sourcegen
+
+	def incrementSourceGen(self):
 		self.sourcegen+=1
