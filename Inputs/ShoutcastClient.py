@@ -3,9 +3,6 @@ import urllib2
 class ShoutcastClient():
 	def __init__(self,store,logger):
 		self.store=store
-		'''
-		Store will contain sourcegen, fragments, icyint, icylist, icyheaders and icytitle
-		'''
 		self.logger=logger
 		self.config_set=False
 		self.isclosing=False
@@ -25,6 +22,7 @@ class ShoutcastClient():
 		self.config_set=True
 
 	def run(self):
+		self.logger.log('Started','ShoutcastClient',3)
 		if not self.config_set:
 			raise ValueError("Configuration not set")
 
@@ -45,15 +43,19 @@ class ShoutcastClient():
 		icylist=self.store.getIcyList()
 		icyheaders=self.store.getIcyHeaders()
 		
-		self.logger.log("Connecting to stream: "+self.config['streamurl'],'ShoutcastClient',3)
+		self.logger.log('Stream URL: '+self.config['streamurl'],'ShoutcastClient',3)
+		
 		if self.config['getmetadata']:
+			self.logger.log("Connecting to stream requesting metadata",'ShoutcastClient',3)
 			stream=urllib2.urlopen(urllib2.Request(self.config['streamurl'],headers={'Icy-MetaData':'1','User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
 			if stream.headers.has_key('icy-metaint'):
 				self.store.setIcyInt(int(stream.headers['icy-metaint']))
 			for metaidx in stream.headers.keys():
+				self.logger.log("Received header "+metaidx+': '+stream.headers[metaidx],'ShoutcastClient',3)
 				if ( metaidx[:4]=='icy-' and metaidx!='icy-metaint' ) or metaidx.lower()=='content-type':
 					icyheaders[metaidx]=stream.headers[metaidx]
 		else:
+			self.logger.log("Connecting to stream without requesting metadata",'ShoutcastClient',3)
 			stream=urllib2.urlopen(urllib2.Request(self.config['streamurl'],headers={'User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
 		self.logger.log("Connected to stream",'ShoutcastClient',3)
 		self.store.setIcyHeaders(icyheaders)
@@ -121,3 +123,4 @@ class ShoutcastClient():
 		
 	def close(self):
 		self.isclosing=True
+		self.logger.log('ShoutcastClient is terminating, this could need some time','ShoutcastClient',3)

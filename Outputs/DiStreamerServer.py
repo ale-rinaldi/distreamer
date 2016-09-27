@@ -93,11 +93,15 @@ class DiStreamerServer:
 	def run(self):
 		if not self.config_set:
 			raise ValueError('Config not set')
-		self.logger.log('Starting','DiStreamerServer',2)
 		handler=makeServerHandler(self.store,self.logger)
 		self.httpd = ThreadingSimpleServer((self.config['hostname'], int(self.config['port'])), handler)
-		self.httpd.serve_forever()
-		
+		self.logger.log('Started','DiStreamerServer',2)
+		try:
+			self.httpd.serve_forever()
+		except:
+			pass
+		self.logger.log('Server terminated','DiStreamerServer',2)
+
 	def close(self):
 		self.logger.log('Exiting normally','DiStreamerServer',2)
 		self.httpd.server_close()
