@@ -54,8 +54,9 @@ class ShoutcastClient():
 			if header=='':
 				break
 			self.logger.log("Received header - "+header,'ShoutcastClient',3)
-			k=header.split(':')[0].strip()
-			v=header.split(':')[1].strip()
+			seppos=header.find(':')
+			k=header[:seppos]
+			v=header[seppos+1:]
 			if k.lower()=='icy-metaint':
 				self.store.setIcyInt(int(v))
 			elif k.lower()[:4]=='icy-' or k.lower()=='content-type':

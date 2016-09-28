@@ -13,6 +13,7 @@ class DiStreamerClient():
 			'serverurl': '',
 			'httptimeout': 5,
 			'httpinterval': 3,
+			'password': ''
 		}
 	
 	def setConfig(self,config):
@@ -21,7 +22,10 @@ class DiStreamerClient():
 
 	def run(self):
 		while not self.isclosing:
-			result=urllib2.urlopen(urllib2.Request(self.config['serverurl']+'/list',headers={'User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
+			if self.config['password']!='':
+				result=urllib2.urlopen(urllib2.Request(self.config['serverurl']+'/list/'+self.config['password'],headers={'User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
+			else:
+				result=urllib2.urlopen(urllib2.Request(self.config['serverurl']+'/list',headers={'User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
 			exclen=result.headers['Content-Length']
 			cslist=result.read()
 			if len(cslist)!=int(exclen):
@@ -58,7 +62,10 @@ class DiStreamerClient():
 				if self.isclosing:
 					break
 				if (not(fragments.has_key(fragn)) or fragments[fragn]==''):
-					result=urllib2.urlopen(urllib2.Request(self.config['serverurl']+'/'+str(fragn),headers={'User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
+					if self.config['password']:
+						result=urllib2.urlopen(urllib2.Request(self.config['serverurl']+'/'+str(fragn)+'/'+self.config['password'],headers={'User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
+					else:
+						result=urllib2.urlopen(urllib2.Request(self.config['serverurl']+'/'+str(fragn),headers={'User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
 					exclen=result.headers['Content-Length']
 					fragment=result.read()
 					if len(fragment)!=int(exclen):
