@@ -1,13 +1,70 @@
-import urllib2
+import socket,urlparse
 
 class ShoutcastClient():
+
 	def __init__(self,store,logger):
 		self.store=store
 		self.logger=logger
 		self.config_set=False
 		self.isclosing=False
-		
+		self.socket=None
 
+	def _ShoutcastConnect(self,url,headers,timeout):
+		u=urlparse.urlparse(url)
+		if u.path=='':
+			path='/'
+		else:
+			path=u.path
+		server=u.netloc.split(':')[0]
+		port=-1
+		if len(u.netloc.split(':'))>1:
+			print "PORTTT"
+			port=int(u.netloc.split(':')[1])
+		if port<0:
+			port=80
+		self.logger.log('Connecting to '+server+' on port '+str(port),'ShoutcastClient',3)
+		s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		s.setblocking(1)
+		s.connect((server, port))
+		self.logger.log('Connected','ShoutcastClient',3)
+		f=s.makefile()
+		s.settimeout(timeout)
+		s.send('GET '+path+ ' HTTP/1.1\r\n')
+		s.send('Host: '+u.netloc+'\r\n')
+		s.send('Accept-Encoding: identity\r\n')
+		for key in headers.keys():
+			s.send(key+': '+headers[key]+'\r\n')
+		s.send('\r\n')
+		lstatus=f.readline()
+		if lstatus.split(' ')[1]!='200':
+			s.close()
+			raise ValueError('Invalid status from server')
+		headerscount=0
+		headers=self.store.getIcyHeaders()
+		while True:
+			headerscount+=1
+			if headerscount>100:
+				s.close()
+				raise ValueError('Too many headers received')
+			lheader=f.readline(65537)
+			if len(lheader)>65536:
+				s.close()
+				raise ValueError('Header too long')
+			header=lheader.strip()
+			if header=='':
+				break
+			self.logger.log("Received header - "+header,'ShoutcastClient',3)
+			k=header.split(':')[0].strip()
+			v=header.split(':')[1].strip()
+			if k.lower()=='icy-metaint':
+				self.store.setIcyInt(int(v))
+			elif k.lower()[:4]=='icy-' or k.lower()=='content-type':
+				headers[k]=v
+		self.store.setIcyHeaders(headers)
+		self.socket=s
+		self.socketfile=f
+		return f
+		
 	def getDefaultConfig(self):
 		return {
 			'streamurl': '',
@@ -47,21 +104,19 @@ class ShoutcastClient():
 		
 		if self.config['getmetadata']:
 			self.logger.log("Connecting to stream requesting metadata",'ShoutcastClient',3)
-			stream=urllib2.urlopen(urllib2.Request(self.config['streamurl'],headers={'Icy-MetaData':'1','User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
-			if stream.headers.has_key('icy-metaint'):
-				self.store.setIcyInt(int(stream.headers['icy-metaint']))
-			for metaidx in stream.headers.keys():
-				self.logger.log("Received header "+metaidx+': '+stream.headers[metaidx],'ShoutcastClient',3)
-				if ( metaidx[:4]=='icy-' and metaidx!='icy-metaint' ) or metaidx.lower()=='content-type':
-					icyheaders[metaidx]=stream.headers[metaidx]
+			#stream=urllib2.urlopen(urllib2.Request(self.config['streamurl'],headers={'Icy-MetaData':'1','User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
+			stream=self._ShoutcastConnect(self.config['streamurl'],{'Icy-MetaData':'1','User-Agent':'DiStreamer'},self.config['httptimeout'])
 		else:
-			self.logger.log("Connecting to stream without requesting metadata",'ShoutcastClient',3)
-			stream=urllib2.urlopen(urllib2.Request(self.config['streamurl'],headers={'User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
+			stream=self._ShoutcastConnect(self.config['streamurl'],{'User-Agent':'DiStreamer'},self.config['httptimeout'])
 		self.logger.log("Connected to stream",'ShoutcastClient',3)
 		self.store.setIcyHeaders(icyheaders)
 		
 		while not self.isclosing:
-			fragment=stream.read(self.config['fragmentsize'])
+			try:
+				fragment=stream.read(self.config['fragmentsize'])
+			except:
+				if self.isclosing:
+					return None
 			if len(fragment)!=self.config['fragmentsize']:
 				raise ValueError("Incomplete read of block")
 			idx=counter
@@ -116,7 +171,6 @@ class ShoutcastClient():
 				if icylist.has_key(todelete):
 					del icylist[todelete]
 				self.logger.log("Deleted fragment "+str(todelete),'ShoutcastClient',3)
-			
 			self.store.setFragments(fragments)
 			self.store.setIcyList(icylist)
 		self.logger.log('ShoutcastClient terminated normally','ShoutcastClient',2)
@@ -124,3 +178,6 @@ class ShoutcastClient():
 	def close(self):
 		self.isclosing=True
 		self.logger.log('ShoutcastClient is terminating, this could need some time','ShoutcastClient',3)
+		if self.socket and self.socketfile:
+			self.socket.close()
+			self.socketfile.close()
