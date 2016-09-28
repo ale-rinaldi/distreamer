@@ -115,6 +115,7 @@ class ShoutcastServer:
 		self.lisclosing=[False]
 		handler=makeServerHandler(self.store,self.logger,self.lisclosing)
 		self.httpd = ThreadingSimpleServer((self.config['hostname'], int(self.config['port'])), handler)
+		self.logger.log('Started','ShoutcastServer',2)
 		try:
 			self.httpd.serve_forever()
 		except:
