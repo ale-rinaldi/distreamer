@@ -11,7 +11,6 @@ class DiStreamerClient():
 	def getDefaultConfig(self):
 		return {
 			'serverurl': '',
-			'getmetadata': True,
 			'httptimeout': 5,
 			'httpinterval': 3,
 		}
