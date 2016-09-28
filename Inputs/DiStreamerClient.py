@@ -35,7 +35,7 @@ class DiStreamerClient():
 			icyint=int(infolist[1])
 			self.store.setIcyInt(icyint)
 			if icyint>0:
-				icylist=self.store.getIcyList()
+				icylist={}
 				sicylist=infolist[2].split(',')
 				for icyfrag in sicylist:
 					aicylist=icyfrag.split(':')
