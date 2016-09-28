@@ -16,10 +16,24 @@ class DiStreamerConfig:
 		return v.lower() in ("yes", "true", "t", "1")
 
 	def getGeneralConfig(self):
+		defaults={
+			'outputlevel': 2,
+			'logfile': '',
+			'loglevel': 2
+		}
 		genconfig=dict(self.config.items('GENERAL'))
-		genconfig['inputmode']=self.config.get('INPUT','MODE')
-		genconfig['outputmode']=self.config.get('OUTPUT','MODE')
-		return genconfig
+		for key in defaults:
+			if genconfig.has_key(key):
+				if type(defaults[key]) is int:
+					newval=int(genconfig[key])
+				elif type(defaults[key]) is bool:
+					newval=self.str2bool(genconfig[key])
+				else:
+					newval=genconfig[key]
+				defaults[key]=newval
+		defaults['inputmode']=self.config.get('INPUT','MODE')
+		defaults['outputmode']=self.config.get('OUTPUT','MODE')
+		return defaults
 	
 	def getInputConfig(self,defaults):
 		inconfig=dict(self.config.items('INPUT'))
