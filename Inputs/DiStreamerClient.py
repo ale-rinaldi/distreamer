@@ -1,4 +1,4 @@
-import urllib2
+import urllib2,time
 
 class DiStreamerClient():
 	def __init__(self,store,logger):
@@ -76,6 +76,7 @@ class DiStreamerClient():
 					del fragments[localfragn]
 					self.store.setFragments(fragments)
 					self.logger.log('Deleted fragment '+str(localfragn),'DiStreamerClient',3)
+			time.sleep(self.config['httpinterval'])
 		self.logger.log('DiStreamerClient terminated normally','ShoutcastClient',2)
 
 	def close(self):
