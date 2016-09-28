@@ -78,8 +78,12 @@ def makeServerHandler(store,logger,config):
 				s.end_headers()
 				s.wfile.write(tosend)
 			else:
-				key=int(path)
-				if fragments.has_key(key):
+				key=-1
+				try:
+					key=int(path)
+				except:
+					pass
+				if key>=0 and fragments.has_key(key):
 					s.send_response(200)
 					s.send_header("Server", "DiStreamer")
 					s.send_header("Content-Length", str(len(fragments[key])))
@@ -89,7 +93,7 @@ def makeServerHandler(store,logger,config):
 					s.send_response(404)
 					s.send_header("Server", "DiStreamer")
 					s.end_headers()
-					s.wfile.write("Invalid fragment "+str(key))
+					s.wfile.write("Invalid fragment "+path)
 		def log_message(self, format, *args):
 			return
 	return distreamerServerHandler
