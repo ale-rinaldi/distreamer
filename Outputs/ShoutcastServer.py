@@ -40,15 +40,15 @@ def makeServerHandler(store,logger,lisclosing):
 			firstsent=False
 			fragments=s.store.getFragments()
 			if icyint>0:
-				reconnect=s.store.getSourceGen()
-				if locreconnect!=reconnect or reconnect<=0:
-					return None
 				if icytitle!='':
 					s.wfile.write(''.join(chr(255) for i in xrange(icyint)))
 					chridx=len(icytitle)/16
 					s.wfile.write(chr(chridx))
 					s.wfile.write(icytitle)
 				while not firstsent:
+					reconnect=s.store.getSourceGen()
+					if locreconnect!=reconnect or reconnect<=0:
+						return None
 					locallist=fragments.keys()
 					locallist.sort()
 					icylist=s.store.getIcyList()

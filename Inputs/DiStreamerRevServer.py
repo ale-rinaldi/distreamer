@@ -1,4 +1,4 @@
-import BaseHTTPServer
+import BaseHTTPServer,json
 from SocketServer import ThreadingMixIn
 
 class ThreadingSimpleServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
@@ -100,47 +100,8 @@ def makeServerHandler(store,logger,config):
 					s.send_header("Server","DiStreamer")
 					s.end_headers()
 					s.wfile.write('Incomplete read')
-				elif path='icyint':
+				elif path='list':
 					s.store.setIcyInt(int(post_body))
-					s.send_response(200)
-					s.send_header("Server","DiStreamer")
-					s.end_headers()
-					s.wfile.write('OK')
-				elif path='icytitle':
-					s.store.setIcyTitle(post_body)
-					s.send_response(200)
-					s.send_header("Server","DiStreamer")
-					s.end_headers()
-					s.wfile.write('OK')
-				elif path='icytitle':
-					s.store.setIcyTitle(post_body)
-					s.send_response(200)
-					s.send_header("Server","DiStreamer")
-					s.end_headers()
-					s.wfile.write('OK')
-				elif path='icylist':
-					icylist={}
-					sicylist=post_body.split(',')
-					for icyfrag in sicylist:
-						aicylist=icyfrag.split(':')
-						if aicylist[0]!='':
-							icyidx=int(aicylist[0])
-							icylist[icyidx]=map(int,aicylist[1].split('-'))
-					s.store.setIcyList(icylist)
-					s.send_response(200)
-					s.send_header("Server","DiStreamer")
-					s.end_headers()
-					s.wfile.write('OK')
-				elif path='icyheaders':
-					aicyheaders=post_body.split(',')
-					tmplist={}
-					for header in aicyheaders:
-						seppos=header.find(':')
-						key=header[:seppos]
-						val=header[seppos+1:]
-						if key!='':
-							tmplist[key]=val
-					s.store.setIcyHeaders(tmplist)
 					s.send_response(200)
 					s.send_header("Server","DiStreamer")
 					s.end_headers()
@@ -163,7 +124,7 @@ def makeServerHandler(store,logger,config):
 						s.send_response(500)
 						s.send_header("Server","DiStreamer")
 						s.end_headers()
-						s.wfile.write('Invalid request')
+						s.wfile.write('Invalid request: '+path)
 		
 		def log_message(self, format, *args):
 			return
