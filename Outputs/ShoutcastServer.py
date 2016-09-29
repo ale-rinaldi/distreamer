@@ -48,13 +48,14 @@ def makeServerHandler(store,logger,lisclosing):
 					chridx=len(icytitle)/16
 					s.wfile.write(chr(chridx))
 					s.wfile.write(icytitle)
-				while not firstsent and not s.lisclosing[0]:
+				while not firstsent:
 					locallist=fragments.keys()
 					locallist.sort()
 					icylist=s.store.getIcyList()
 					for fragn in locallist:
-						if icylist.has_key(fragn):
-							icyblkmin=min(icylist[fragn])
+						sfragn=str(fragn)
+						if icylist.has_key(sfragn):
+							icyblkmin=min(icylist[sfragn])
 							lastsent=fragn
 							s.wfile.write(fragments[fragn][icyblkmin:])
 							sentlist.append(fragn)
@@ -63,6 +64,8 @@ def makeServerHandler(store,logger,lisclosing):
 						else:
 							sentlist.append(fragn)
 						time.sleep(1)
+						if s.lisclosing[0]:
+							break
 					fragments=s.store.getFragments()
 			else:
 				lastsent=min(fragments.keys())-1

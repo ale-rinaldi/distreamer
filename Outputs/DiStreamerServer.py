@@ -1,4 +1,4 @@
-import BaseHTTPServer
+import BaseHTTPServer, json
 from SocketServer import ThreadingMixIn
 
 class ThreadingSimpleServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
@@ -37,13 +37,6 @@ def makeServerHandler(store,logger,config):
 					s.send_header("Server","DiStreamer")
 
 		def do_GET(s):
-			icylist=s.store.getIcyList()
-			icyint=s.store.getIcyInt()
-			icyheaders=s.store.getIcyHeaders()
-			icytitle=s.store.getIcyTitle()
-			fragments=s.store.getFragments()
-			reconnect=s.store.getSourceGen()
-			
 			frag=s.path[1:]
 			seppos=frag.find('/')
 			if seppos<0:
@@ -61,19 +54,16 @@ def makeServerHandler(store,logger,config):
 				s.send_response(200)
 				s.send_header("Server", "DiStreamer")
 				s.send_header("Content-Type", "text/plain")
-				flist=fragments.keys()
+				flist=s.store.getFragments().keys()
 				flist.sort()
-				tosend=','.join(map(str,flist))
-				tosend=tosend+'|'+str(icyint)+'|'
-				tmplist=[]
-				for frag in icylist:
-					tmplist.append(str(frag)+':'+'-'.join(map(str,icylist[frag])))
-				tosend=tosend+','.join(tmplist)+'|'
-				tmplist=[]
-				for metaidx in icyheaders:
-					tmplist.append(metaidx+':'+icyheaders[metaidx])
-				tosend=tosend+','.join(tmplist)+'|'+str(reconnect)+'|'
-				tosend=tosend+icytitle
+				tosend=json.dumps({
+					'fragmentslist': flist,
+					'icyint': s.store.getIcyInt(),
+					'icylist': s.store.getIcyList(),
+					'icyheaders': s.store.getIcyHeaders(),
+					'icytitle': s.store.getIcyTitle(),
+					'sourcegen': s.store.getSourceGen()
+				})
 				s.send_header("Content-Length", str(len(tosend)))
 				s.end_headers()
 				s.wfile.write(tosend)
@@ -83,12 +73,13 @@ def makeServerHandler(store,logger,config):
 					key=int(path)
 				except:
 					pass
-				if key>=0 and fragments.has_key(key):
+				if key>=0 and s.store.getFragments().has_key(key):
+					fragment=s.store.getFragments()[key]
 					s.send_response(200)
 					s.send_header("Server", "DiStreamer")
-					s.send_header("Content-Length", str(len(fragments[key])))
+					s.send_header("Content-Length", str(len(fragment)))
 					s.end_headers()
-					s.wfile.write(fragments[key])
+					s.wfile.write(fragment)
 				else:
 					s.send_response(404)
 					s.send_header("Server", "DiStreamer")

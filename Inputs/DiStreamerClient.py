@@ -1,4 +1,4 @@
-import urllib2,time
+import urllib2,time,json
 
 class DiStreamerClient():
 	def __init__(self,store,logger):
@@ -31,32 +31,13 @@ class DiStreamerClient():
 			if len(cslist)!=int(exclen):
 				self.logger.log("Incomplete read of list",'DiStreamerClient',2)
 				return False
-			infolist=cslist.split('|')
-			icyint=int(infolist[1])
-			self.store.setIcyInt(icyint)
-			if icyint>0:
-				icylist={}
-				sicylist=infolist[2].split(',')
-				for icyfrag in sicylist:
-					aicylist=icyfrag.split(':')
-					if aicylist[0]!='':
-						icyidx=int(aicylist[0])
-						icylist[icyidx]=map(int,aicylist[1].split('-'))
-				self.store.setIcyList(icylist)
-			aicyheaders=infolist[3].split(',')
-			tmplist={}
-			for header in aicyheaders:
-				seppos=header.find(':')
-				key=header[:seppos]
-				val=header[seppos+1:]
-				if key!='':
-					tmplist[key]=val
-			self.store.setIcyHeaders(tmplist)
-			self.store.setSourceGen(int(infolist[4]))
-			self.store.setIcyTitle(infolist[5])
-			cslist=infolist[0]
-			slist=cslist.split(',')
-			list=map(int,slist)
+			infolist=json.loads(cslist)
+			self.store.setIcyInt(infolist['icyint'])
+			self.store.setIcyList(infolist['icylist'])
+			self.store.setIcyHeaders(infolist['icyheaders'])
+			self.store.setSourceGen(infolist['sourcegen'])
+			self.store.setIcyTitle(infolist['icytitle'])
+			list=infolist['fragmentslist']
 			fragments=self.store.getFragments()
 			for fragn in list:
 				if self.isclosing:
@@ -83,7 +64,7 @@ class DiStreamerClient():
 					self.store.setFragments(fragments)
 					self.logger.log('Deleted fragment '+str(localfragn),'DiStreamerClient',3)
 			time.sleep(self.config['httpinterval'])
-		self.logger.log('DiStreamerClient terminated normally','ShoutcastClient',2)
+		self.logger.log('DiStreamerClient terminated normally','DiStreamerClient',2)
 
 	def close(self):
 		self.isclosing=True

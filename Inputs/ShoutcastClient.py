@@ -179,6 +179,5 @@ class ShoutcastClient():
 	def close(self):
 		self.isclosing=True
 		self.logger.log('ShoutcastClient is terminating, this could need some time','ShoutcastClient',3)
-		if self.socket and self.socketfile:
+		if self.socket:
 			self.socket.close()
-			self.socketfile.close()
