@@ -61,9 +61,10 @@ def makeServerHandler(store,logger,config):
 					'icyint': s.store.getIcyInt(),
 					'icylist': s.store.getIcyList(),
 					'icyheaders': s.store.getIcyHeaders(),
-					'icytitle': s.store.getIcyTitle(),
+					'icytitle': s.store.getIcyTitle().encode('base64'),
 					'sourcegen': s.store.getSourceGen()
 				})
+				s.logger.log('List: '+tosend,'DiStreamerServer',4)
 				s.send_header("Content-Length", str(len(tosend)))
 				s.end_headers()
 				s.wfile.write(tosend)

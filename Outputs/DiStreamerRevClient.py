@@ -55,7 +55,7 @@ class DiStreamerRevClient():
 					'icyint': self.store.getIcyInt(),
 					'icylist': self.store.getIcyList(),
 					'icyheaders': self.store.getIcyHeaders(),
-					'icytitle': self.store.getIcyTitle(),
+					'icytitle': self.store.getIcyTitle().encode('base64'),
 					'sourcegen': self.store.getSourceGen()
 				})
 				if self.config['password']!='':
