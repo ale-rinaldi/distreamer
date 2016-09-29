@@ -18,15 +18,14 @@ class ShoutcastClient():
 		server=u.netloc.split(':')[0]
 		port=-1
 		if len(u.netloc.split(':'))>1:
-			print "PORTTT"
 			port=int(u.netloc.split(':')[1])
 		if port<0:
 			port=80
-		self.logger.log('Connecting to '+server+' on port '+str(port),'ShoutcastClient',3)
+		self.logger.log('Connecting to '+server+' on port '+str(port),'ShoutcastClient',4)
 		s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		s.setblocking(1)
 		s.connect((server, port))
-		self.logger.log('Connected','ShoutcastClient',3)
+		self.logger.log('Connected','ShoutcastClient',4)
 		f=s.makefile()
 		s.settimeout(timeout)
 		s.send('GET '+path+ ' HTTP/1.1\r\n')
@@ -53,7 +52,7 @@ class ShoutcastClient():
 			header=lheader.strip()
 			if header=='':
 				break
-			self.logger.log("Received header - "+header,'ShoutcastClient',3)
+			self.logger.log("Received header - "+header,'ShoutcastClient',4)
 			seppos=header.find(':')
 			k=header[:seppos]
 			v=header[seppos+1:]

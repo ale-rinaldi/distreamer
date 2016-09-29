@@ -22,6 +22,7 @@ class DiStreamerClient():
 
 	def run(self):
 		while not self.isclosing:
+			self.logger.log('Requesting list','DiStreamerClient',4)
 			if self.config['password']!='':
 				result=urllib2.urlopen(urllib2.Request(self.config['serverurl']+'/list/'+self.config['password'],headers={'User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
 			else:
@@ -36,13 +37,14 @@ class DiStreamerClient():
 			self.store.setIcyList(infolist['icylist'])
 			self.store.setIcyHeaders(infolist['icyheaders'])
 			self.store.setSourceGen(infolist['sourcegen'])
-			self.store.setIcyTitle(infolist['icytitle'])
+			self.store.setIcyTitle(infolist['icytitle'].decode('base64'))
 			list=infolist['fragmentslist']
 			fragments=self.store.getFragments()
 			for fragn in list:
 				if self.isclosing:
 					break
 				if (not(fragments.has_key(fragn)) or fragments[fragn]==''):
+					self.logger.log('Requesting fragment '+str(fragn),'DiStreamerClient',4)
 					if self.config['password']:
 						result=urllib2.urlopen(urllib2.Request(self.config['serverurl']+'/'+str(fragn)+'/'+self.config['password'],headers={'User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
 					else:

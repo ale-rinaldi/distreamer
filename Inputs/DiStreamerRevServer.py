@@ -96,13 +96,13 @@ def makeServerHandler(store,logger,config):
 					s.store.setIcyList(infolist['icylist'])
 					s.store.setIcyHeaders(infolist['icyheaders'])
 					s.store.setSourceGen(infolist['sourcegen'])
-					s.store.setIcyTitle(infolist['icytitle'])
+					s.store.setIcyTitle(infolist['icytitle'].decode('base64'))
 					list=infolist['fragmentslist']
 					fragments=s.store.getFragments()
 					for localfragn in s.store.getFragments().keys():
 						if(localfragn not in list):
 							del fragments[localfragn]
-							s.logger.log('Deleted fragment '+str(localfragn),'DiStreamerClient',3)
+							s.logger.log('Deleted fragment '+str(localfragn),'DiStreamerRevServer',3)
 					s.store.setFragments(fragments)
 					s.send_response(200)
 					s.send_header("Server","DiStreamer")
