@@ -1,5 +1,48 @@
 import socket,urlparse
 
+class ShoutcastClientFragmentsManager:
+	def __init__(self,store,logger,config):
+		self.store=store
+		self.logger=logger
+		self.config=config
+		self.currentfrag=''
+		fragkeys=store.getFragments().keys()
+		if len(fragkeys)>0:
+			self.fragcounter=max(fragkeys)+1
+		else:
+			self.fragcounter=1
+		self.poscounter=0
+	def push(self,piece):
+		while len(piece)>=self.config['fragmentsize']-self.poscounter:
+			last=self.config['fragmentsize']-self.poscounter
+			self.currentfrag=self.currentfrag+piece[:last]
+			fragments=self.store.getFragments()
+			fragments[self.fragcounter]=self.currentfrag
+			self.logger.log('Created fragment '+str(self.fragcounter),'ShoutcastClient',3)
+			self.deleteOldFragments(fragments)
+			self.store.setFragments(fragments)
+			self.currentfrag=''
+			self.fragcounter+=1
+			self.poscounter=0
+			piece=piece[last:]
+		self.currentfrag=self.currentfrag+piece
+		self.poscounter+=len(piece)
+	def deleteOldFragments(self,fragments):
+		icylist=self.store.getIcyList()
+		while len(fragments)>self.config['fragmentsnumber']:
+			todelete=min(fragments.keys())
+			del fragments[todelete]
+			if icylist.has_key(todelete):
+				del icylist[todelete]
+			self.logger.log("Deleted fragment "+str(todelete),'ShoutcastClient',3)
+		self.store.setIcyList(icylist)
+	def setIcyPos(self):
+		icylist=self.store.getIcyList()
+		if not icylist.has_key(self.fragcounter):
+			icylist[self.fragcounter]=[]
+		icylist[self.fragcounter].append(self.poscounter)
+		self.store.setIcyList(icylist)
+
 class ShoutcastClient():
 
 	def __init__(self,store,logger):
@@ -89,16 +132,11 @@ class ShoutcastClient():
 		self.store.incrementSourceGen()
 		self.store.reset()
 		
-		counter=1
-		icyread=0
-		icynbstart=0
-		icyreadfromblock=0
-		icyreadingtitle=False
-		icytemptitle=""
+		fmanager=ShoutcastClientFragmentsManager(self.store,self.logger,self.config)
+		
 		
 		fragments=self.store.getFragments()
 		icylist=self.store.getIcyList()
-		icyheaders=self.store.getIcyHeaders()
 		
 		self.logger.log('Stream URL: '+self.config['streamurl'],'ShoutcastClient',3)
 		
@@ -109,70 +147,30 @@ class ShoutcastClient():
 		else:
 			stream=self._ShoutcastConnect(self.config['streamurl'],{'User-Agent':'DiStreamer'},self.config['httptimeout'])
 		self.logger.log("Connected to stream",'ShoutcastClient',3)
-		self.store.setIcyHeaders(icyheaders)
 		
+		icyint=self.store.getIcyInt()
+		if icyint>0:
+			toread=icyint
+		else
+			toread=self.config['fragmentsize']
 		while not self.isclosing:
 			try:
-				fragment=stream.read(self.config['fragmentsize'])
+				buf=stream.read(toread)
 			except:
 				if self.isclosing:
 					return None
-			if len(fragment)!=self.config['fragmentsize']:
+			if len(buf)!=toread:
 				raise ValueError("Incomplete read of block")
-			idx=counter
-			if self.store.getIcyInt()>0:
-				if idx==icyreadfromblock:
-					icytemptitle=icytemptitle+fragment[:icynbstart-1]
-					icyreadingtitle=False
-				if not icyreadingtitle and icytemptitle!='':
-					self.store.setIcyTitle(icytemptitle)
-					icytemptitle=""
-				if idx<icyreadfromblock and icyreadingtitle:
-					icytemptitle=icytemptitle+fragment
-				if idx>=icyreadfromblock:
-					if icynbstart>0:
-						x=icynbstart
-					else:
-						x=0
-					icynbstart=0
-					while x<self.config['fragmentsize']:
-						if icyread==self.store.getIcyInt():
-							icylen=ord(fragment[x])*16+1
-							icystart=x+1
-							icytpos=x+icylen
-							icytblock=idx
-							while icytpos>=self.config['fragmentsize']:
-								icytblock=icytblock+1
-								icytpos=icytpos-self.config['fragmentsize']
-								icynbstart=icytpos+1
-							icyblock=icytblock
-							icypos=icytpos
-							icyreadfromblock=icyblock
-							if icylen>1:
-								if icyblock==idx:
-									icyreadingtitle=False
-									icytemptitle=fragment[icystart:icypos]
-								else:
-									icyreadingtitle=True
-									icytemptitle=fragment[icystart:]
-							if not icylist.has_key(icyblock):
-								icylist[icyblock]=[]
-							icylist[icyblock].append(icypos)
-							x=x+icylen
-							icyread=0
-						icyread=icyread+1
-						x=x+1
-			counter=counter+1
-			fragments[idx]=fragment
-			self.logger.log("Created fragment "+str(idx),'ShoutcastClient',3)
-			while len(fragments)>self.config['fragmentsnumber']:
-				todelete=min(fragments.keys())
-				del fragments[todelete]
-				if icylist.has_key(todelete):
-					del icylist[todelete]
-				self.logger.log("Deleted fragment "+str(todelete),'ShoutcastClient',3)
-			self.store.setFragments(fragments)
-			self.store.setIcyList(icylist)
+			fmanager.push(buf)
+			if icyint>0:
+				ordicylen=stream.read(1)
+				fmanager.push(ordicylen)
+				icylen=ord(ordicylen)*16
+				title=stream.read(icylen)
+				if title!='':
+					self.store.setIcyTitle(title)
+				fmanager.push(title)
+				fmanager.setIcyPos()
 		self.logger.log('ShoutcastClient terminated normally','ShoutcastClient',2)
 		
 	def close(self):
