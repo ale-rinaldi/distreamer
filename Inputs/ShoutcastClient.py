@@ -151,7 +151,7 @@ class ShoutcastClient():
 		icyint=self.store.getIcyInt()
 		if icyint>0:
 			toread=icyint
-		else
+		else:
 			toread=self.config['fragmentsize']
 		while not self.isclosing:
 			try:

@@ -53,9 +53,8 @@ def makeServerHandler(store,logger,lisclosing):
 					locallist.sort()
 					icylist=s.store.getIcyList()
 					for fragn in locallist:
-						sfragn=str(fragn)
-						if icylist.has_key(sfragn):
-							icyblkmin=min(icylist[sfragn])
+						if icylist.has_key(fragn):
+							icyblkmin=min(icylist[fragn])
 							lastsent=fragn
 							s.wfile.write(fragments[fragn][icyblkmin:])
 							sentlist.append(fragn)

@@ -12,6 +12,12 @@ def makeServerHandler(store,logger,config):
 			s.config=config
 			super(DiStreamerRevServerHandler, s).__init__(*args, **kwargs)
 		
+		def keysToInt(s,dictionary):
+			''' THANKS!!! http://stackoverflow.com/questions/1254454/fastest-way-to-convert-a-dicts-keys-values-from-unicode-to-str '''
+			if not isinstance(dictionary, dict):
+				return dictionary
+			return dict((int(k), s.keysToInt(v)) for k, v in dictionary.items())
+		
 		def do_HEAD(s):
 			frag=s.path[1:]
 			seppos=frag.find('/')
@@ -93,7 +99,7 @@ def makeServerHandler(store,logger,config):
 				elif path=='list':
 					infolist=json.loads(post_body)
 					s.store.setIcyInt(infolist['icyint'])
-					s.store.setIcyList(infolist['icylist'])
+					s.store.setIcyList(s.keysToInt(infolist['icylist']))
 					s.store.setIcyHeaders(infolist['icyheaders'])
 					s.store.setSourceGen(infolist['sourcegen'])
 					s.store.setIcyTitle(infolist['icytitle'].decode('base64'))

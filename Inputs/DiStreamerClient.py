@@ -20,6 +20,12 @@ class DiStreamerClient():
 		self.config=config
 		self.config_set=True
 
+	def keysToInt(self,dictionary):
+		''' THANKS!!! http://stackoverflow.com/questions/1254454/fastest-way-to-convert-a-dicts-keys-values-from-unicode-to-str '''
+		if not isinstance(dictionary, dict):
+			return dictionary
+		return dict((int(k), self.keysToInt(v)) for k, v in dictionary.items())
+	
 	def run(self):
 		while not self.isclosing:
 			self.logger.log('Requesting list','DiStreamerClient',4)
@@ -34,7 +40,7 @@ class DiStreamerClient():
 				return False
 			infolist=json.loads(cslist)
 			self.store.setIcyInt(infolist['icyint'])
-			self.store.setIcyList(infolist['icylist'])
+			self.store.setIcyList(self.keysToInt(infolist['icylist']))
 			self.store.setIcyHeaders(infolist['icyheaders'])
 			self.store.setSourceGen(infolist['sourcegen'])
 			self.store.setIcyTitle(infolist['icytitle'].decode('base64'))
