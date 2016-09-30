@@ -4,14 +4,57 @@ from SocketServer import ThreadingMixIn
 class ThreadingSimpleServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
 	pass
 
-class TitleQueue:
+class ShoutcastSourceServerTitleQueue:
 	def __init__(self):
 		self.queue=[]
 	def addtitle(self,title):
 		self.queue.add(title)
 	def gettitle(self):
 		return self.queue.pop(0)
-
+		
+class ShoutcastSourceServerFragmentsManager:
+	def __init__(self,store,logger,config):
+		self.store=store
+		self.logger=logger
+		self.config=config
+		self.currentfrag=''
+		fragkeys=store.getFragments().keys()
+		if len(fragkeys)>0:
+			self.fragcounter=max(fragkeys)+1
+		else:
+			self.fragcounter=1
+		self.poscounter=0
+	def push(self,piece):
+		while len(piece)>=self.config['fragmentsize']-self.poscounter:
+			last=self.config['fragmentsize']-self.poscounter
+			self.currentfrag=self.currentfrag+piece[:last]
+			fragments=self.store.getFragments()
+			fragments[self.fragcounter]=self.currentfrag
+			self.logger.log('Created fragment '+str(self.fragcounter),'ShoutcastSourceServer',3)
+			self.deleteOldFragments(fragments)
+			self.store.setFragments(fragments)
+			self.currentfrag=''
+			self.fragcounter+=1
+			self.poscounter=0
+			piece=piece[last:]
+		self.currentfrag=self.currentfrag+piece
+		self.poscounter+=len(piece)
+	def deleteOldFragments(self,fragments):
+		icylist=self.store.getIcyList()
+		while len(fragments)>self.config['fragmentsnumber']:
+			todelete=min(fragments.keys())
+			del fragments[todelete]
+			if icylist.has_key(todelete):
+				del icylist[todelete]
+			self.logger.log("Deleted fragment "+str(todelete),'ShoutcastSourceServer',3)
+		self.store.setIcyList(icylist)
+	def setIcyPos(self):
+		icylist=self.store.getIcyList()
+		if not icylist.has_key(self.fragcounter):
+			icylist[self.fragcounter]=[]
+		icylist[self.fragcounter].append(self.poscounter)
+		self.store.setIcyList(icylist)
+		
 def makeServerHandler(store,logger,config):
 	class ShoutcastSourceServerHandler(BaseHTTPServer.BaseHTTPRequestHandler,object):
 		def __init__(s, *args, **kwargs):
@@ -109,7 +152,12 @@ class ShoutcastSourceServer:
 		return {
 			'hostname': '0.0.0.0',
 			'port': '8080',
-			'password': 'distreamer'
+			'password': 'distreamer',
+			'fragmentsnumber': 5,
+			'fragmentsize': 81920,
+			'getmetadata': True,
+			'httptimeout': 5,
+			'icyint': 8192
 		}
 		
 	def setConfig(self,config):
