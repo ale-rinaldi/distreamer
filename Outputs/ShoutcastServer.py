@@ -15,22 +15,17 @@ class ShoutcastServerStatsManager():
 class ThreadingSimpleServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
 	pass
 
-def makeServerHandler(store,logger,lisclosing,statmgr):
+def makeServerHandler(store,logger,config,lisclosing,statmgr):
 	class shoutcastServerHandler(BaseHTTPServer.BaseHTTPRequestHandler,object):
-		def __init__(s, *args, **kwargs):
-			s.store=store
-			s.logger=logger
-			s.lisclosing=lisclosing
-			s.statpages=['/stats','/favicon.ico']
-			super(shoutcastServerHandler, s).__init__(*args, **kwargs)
+		statpages=['/stats','/favicon.ico']
 		def do_HEAD(s):
 			s.send_response(200)
 			s.send_header("Server", "DiStreamer")
-			icyheaders=s.store.getIcyHeaders()
+			icyheaders=store.getIcyHeaders()
 			for header in icyheaders:
 				s.send_header(header,icyheaders[header])
-			if(s.store.getIcyInt()>0):
-				s.send_header("icy-metaint", str(s.store.getIcyInt()))
+			if(store.getIcyInt()>0):
+				s.send_header("icy-metaint", str(store.getIcyInt()))
 				
 		def do_GET(s):
 			s.send_response(200)
@@ -41,21 +36,23 @@ def makeServerHandler(store,logger,lisclosing,statmgr):
 				s.wfile.write(json.dumps({'connectedClients':statmgr.get()}))
 				return None
 			statmgr.add()
-			icyheaders=s.store.getIcyHeaders()
+			icyheaders=store.getIcyHeaders()
 			for header in icyheaders:
 				s.send_header(header,icyheaders[header])
-			if(s.store.getIcyInt()>0):
-				s.send_header("icy-metaint", str(s.store.getIcyInt()))
+			if(store.getIcyInt()>0):
+				s.send_header("icy-metaint", str(store.getIcyInt()))
 			s.end_headers()
-			reconnect=s.store.getSourceGen()
+			reconnect=store.getSourceGen()
 			if reconnect<=0:
 				return None
 			sentlist=[]
 			locreconnect=reconnect
-			icytitle=s.store.getIcyTitle()
-			icyint=s.store.getIcyInt()
+			icytitle=store.getIcyTitle()
+			icyint=store.getIcyInt()
 			firstsent=False
-			fragments=s.store.getFragments()
+			fragments=store.getFragments()
+			while len(fragments)<config['minfragments']:
+				time.sleep(0.5)
 			if icyint>0:
 				if icytitle!='':
 					s.wfile.write(''.join(chr(255) for i in xrange(icyint)))
@@ -63,12 +60,12 @@ def makeServerHandler(store,logger,lisclosing,statmgr):
 					s.wfile.write(chr(chridx))
 					s.wfile.write(icytitle)
 				while not firstsent:
-					reconnect=s.store.getSourceGen()
+					reconnect=store.getSourceGen()
 					if locreconnect!=reconnect or reconnect<=0:
 						return None
 					locallist=fragments.keys()
 					locallist.sort()
-					icylist=s.store.getIcyList()
+					icylist=store.getIcyList()
 					for fragn in locallist:
 						if icylist.has_key(fragn):
 							icyblkmin=min(icylist[fragn])
@@ -79,15 +76,13 @@ def makeServerHandler(store,logger,lisclosing,statmgr):
 							break
 						else:
 							sentlist.append(fragn)
-						time.sleep(1)
-						if s.lisclosing[0]:
+						time.sleep(0.5)
+						if lisclosing[0]:
 							break
-					fragments=s.store.getFragments()
 			else:
 				lastsent=min(fragments.keys())-1
-			while not s.lisclosing[0]:
-				fragments=s.store.getFragments()
-				reconnect=s.store.getSourceGen()
+			while not lisclosing[0]:
+				reconnect=store.getSourceGen()
 				if locreconnect!=reconnect or reconnect<=0:
 					return None
 				tosend=''
@@ -103,7 +98,7 @@ def makeServerHandler(store,logger,lisclosing,statmgr):
 				for sentn in sentlist:
 					if not fragments.has_key(sentn):
 						sentlist.remove(sentn)
-						s.logger.log('Removed from sent list: '+str(sentn),'ShoutcastServer',3)
+						logger.log('Removed from sent list: '+str(sentn),'ShoutcastServer',3)
 				s.wfile.write(tosend)
 				time.sleep(1)
 		def log_message(self, format, *args):
@@ -125,6 +120,7 @@ class ShoutcastServer:
 		return {
 			'hostname': '0.0.0.0',
 			'port': '8080',
+			'minfragments': 5
 		}
 		
 	def setConfig(self,config):
@@ -137,7 +133,7 @@ class ShoutcastServer:
 		self.logger.log('Starting','ShoutcastServer',2)
 		self.lisclosing=[False]
 		statmgr=ShoutcastServerStatsManager()
-		handler=makeServerHandler(self.store,self.logger,self.lisclosing,statmgr)
+		handler=makeServerHandler(self.store,self.logger,self.config,self.lisclosing,statmgr)
 		self.httpd = ThreadingSimpleServer((self.config['hostname'], int(self.config['port'])), handler)
 		self.logger.log('Started','ShoutcastServer',2)
 		try:
