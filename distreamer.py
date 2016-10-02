@@ -1,4 +1,4 @@
-import threading, time, importlib, sys
+import threading, time, importlib, os
 from General.DiStreamerConfig import DiStreamerConfig
 from General.DiStreamerLogger import DiStreamerLogger
 from General.DiStreamerStore import DiStreamerStore
@@ -58,15 +58,21 @@ try:
 		time.sleep(1)
 except KeyboardInterrupt:
 	logger.log('Closing DiStreamer','Main',1)
-	inputthread.close()
-	outputthread.close()
+	try:
+		inputthread.close()
+	except:
+		pass
+	try:
+		outputthread.close()
+	except:
+		pass
 	currtime=time.time()
 	while (outputthread.isAlive() or inputthread.isAlive()):
 		if time.time()>currtime+5:
-			logger.log('One of the threads did not exit in 5 seconds. Killing it.','Main',2)
+			logger.log('One of the threads did not exit in 5 seconds. Killing the process.','Main',2)
 			break
 		time.sleep(0.3)
-	sys.exit(0)
+	os._exit(0)
 except:
 	logger.log('Unhandled error, DiStreamer must be closed. Sorry...','Main',1)
 	inputthread.close()
@@ -74,7 +80,7 @@ except:
 	currtime=time.time()
 	while (outputthread.isAlive() or inputthread.isAlive()):
 		if time.time()>currtime+5:
-			logger.log('One of the threads did not exit in 5 seconds. Killing it.','Main',2)
+			logger.log('One of the threads did not exit in 5 seconds. Killing the process.','Main',2)
 			break
 		time.sleep(0.3)
-	sys.exit(0)
+	os._exit(0)
