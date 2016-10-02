@@ -73,6 +73,7 @@ class ShoutcastSourceServerFragmentsManager:
 
 def makeMetadataServerHandler(store,logger,config,titlequeue,sourceconn):
 	class ShoutcastSourceMetadataServerHandler(BaseHTTPServer.BaseHTTPRequestHandler,object):
+		timeout=config['timeout']
 		def do_HEAD(s):
 			path=urlparse.urlparse('http://distreamer'+s.path).path
 			if path='/admin.cgi' and sourceconn.get():
@@ -147,12 +148,12 @@ def makeSourceServerHandler(store,logger,config,sourceconn,titlequeue,lisclosing
 				header=lheader.strip()
 				if header=='':
 					break
-				self.logger.log("Received header - "+header,'ShoutcastSourceServer',4)
+				logger.log("Received header - "+header,'ShoutcastSourceServer',4)
 				seppos=header.find(':')
 				k=header[:seppos]
 				v=header[seppos+1:]
 				if k.lower()=='icy-metaint':
-					self.store.setIcyInt(int(v))
+					store.setIcyInt(int(v))
 				elif k.lower()[:4]=='icy-' or k.lower()=='content-type':
 					headers[k]=v
 			if headerscount==0:
@@ -165,11 +166,11 @@ def makeSourceServerHandler(store,logger,config,sourceconn,titlequeue,lisclosing
 			store.setIcyHeaders(headers)
 			store.setIcyInt(config['icyint'])
 			fmanager=ShoutcastSourceServerFragmentsManager()
-			icyint=self.config['icyint']
+			icyint=config['icyint']
 			if icyint>0:
 				toread=icyint
 			else:
-				toread=self.config['fragmentsize']
+				toread=config['fragmentsize']
 			while not lisclosing[0]:
 				try:
 					buf=self.rfile.read(toread)
@@ -186,6 +187,7 @@ def makeSourceServerHandler(store,logger,config,sourceconn,titlequeue,lisclosing
 					chridx=len(title)/16
 					fmanager.push(chr(chridx))
 					fmanager.push(title)
+					store.setIcyTitle(title)
 		def finish(self):
 			if not self.haderror:
 				titlequeue.reset()
@@ -225,8 +227,7 @@ class ShoutcastSourceServer:
 			'password': 'distreamer',
 			'fragmentsnumber': 5,
 			'fragmentsize': 81920,
-			'getmetadata': True,
-			'httptimeout': 5,
+			'timeout': 5,
 			'icyint': 8192
 		}
 
