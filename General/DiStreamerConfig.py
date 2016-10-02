@@ -1,7 +1,6 @@
 import sys
 from ConfigParser import ConfigParser
 
-''' TODO: check configuration options and stop if something is missing or invalid '''
 class DiStreamerConfig:
 	def __init__(self):
 		config = ConfigParser()
