@@ -1,16 +1,27 @@
 import BaseHTTPServer
-import time
+import time,json
 from SocketServer import ThreadingMixIn
+
+class ShoutcastServerStatsManager():
+	def __init__(self):
+		self.counter=0
+	def add(self):
+		self.counter+=1
+	def rem(self):
+		self.counter-=1
+	def get(self):
+		return self.counter
 
 class ThreadingSimpleServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
 	pass
 
-def makeServerHandler(store,logger,lisclosing):
+def makeServerHandler(store,logger,lisclosing,statmgr):
 	class shoutcastServerHandler(BaseHTTPServer.BaseHTTPRequestHandler,object):
 		def __init__(s, *args, **kwargs):
 			s.store=store
 			s.logger=logger
 			s.lisclosing=lisclosing
+			s.statpages=['/stats','/favicon.ico']
 			super(shoutcastServerHandler, s).__init__(*args, **kwargs)
 		def do_HEAD(s):
 			s.send_response(200)
@@ -24,6 +35,12 @@ def makeServerHandler(store,logger,lisclosing):
 		def do_GET(s):
 			s.send_response(200)
 			s.send_header("Server", "DiStreamer")
+			if s.path in s.statpages:
+				s.send_header('content-type','application/json')
+				s.end_headers()
+				s.wfile.write(json.dumps({'connectedClients':statmgr.get()}))
+				return None
+			statmgr.add()
 			icyheaders=s.store.getIcyHeaders()
 			for header in icyheaders:
 				s.send_header(header,icyheaders[header])
@@ -91,6 +108,10 @@ def makeServerHandler(store,logger,lisclosing):
 				time.sleep(1)
 		def log_message(self, format, *args):
 			return
+		
+		def finish(s):
+			if s.path not in s.statpages:
+				statmgr.rem()
 
 	return shoutcastServerHandler
 
@@ -115,7 +136,8 @@ class ShoutcastServer:
 			raise ValueError('Config not set')
 		self.logger.log('Starting','ShoutcastServer',2)
 		self.lisclosing=[False]
-		handler=makeServerHandler(self.store,self.logger,self.lisclosing)
+		statmgr=ShoutcastServerStatsManager()
+		handler=makeServerHandler(self.store,self.logger,self.lisclosing,statmgr)
 		self.httpd = ThreadingSimpleServer((self.config['hostname'], int(self.config['port'])), handler)
 		self.logger.log('Started','ShoutcastServer',2)
 		try:
