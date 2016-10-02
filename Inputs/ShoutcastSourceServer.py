@@ -9,7 +9,7 @@ class MetadataServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
 class SourceConnectedManager:
 	def __init__(self):
 		self.connected=False
-	def set(self,val)
+	def set(self,val):
 		if type(val) is bool:
 			self.connected=val
 	def get(self):
@@ -19,7 +19,7 @@ class ShoutcastSourceServerTitleQueue:
 	def __init__(self):
 		self.reset()
 	def add(self,title):
-		self.queue.add(title)
+		self.queue.append(title)
 	def get(self):
 		if len(self.queue)>0:
 			return self.queue.pop(0)
@@ -71,15 +71,15 @@ class ShoutcastSourceServerFragmentsManager:
 		icylist[self.fragcounter].append(self.poscounter)
 		self.store.setIcyList(icylist)
 
-def makeMetadataServerHandler(store,logger,config,titlequeue,sourceconn):
+def makeMetadataServerHandler(store,logger,config,sourceconn,titlequeue):
 	class ShoutcastSourceMetadataServerHandler(BaseHTTPServer.BaseHTTPRequestHandler,object):
 		timeout=config['timeout']
 		def do_HEAD(s):
 			path=urlparse.urlparse('http://distreamer'+s.path).path
-			if path='/admin.cgi' and sourceconn.get():
+			if path=='/admin.cgi' and sourceconn.get():
 				s.send_response(200)
 				s.send_header('Server', 'DiStreamer')
-			elif path='/stats':
+			elif path=='/stats':
 				s.send_response(200)
 				s.send_header('Server', 'DiStreamer')
 				s.send_header('Content-Type', 'text/plain')
@@ -87,7 +87,7 @@ def makeMetadataServerHandler(store,logger,config,titlequeue,sourceconn):
 				s.send_response(404)
 				s.send_header('Server', 'DiStreamer')
 
-		def formatTitle(song):
+		def formatTitle(s,song):
 			formtitle='StreamTitle=\''+song+'\';'
 			if len(formtitle)>4080:
 				raise ValueError('Title too long')
@@ -97,20 +97,16 @@ def makeMetadataServerHandler(store,logger,config,titlequeue,sourceconn):
 
 		def do_GET(s):
 			path=urlparse.urlparse('http://distreamer'+s.path).path
-			if path='/admin.cgi' and sourceconn.get():
-				s.send_response(200)
-				s.send_header('Server', 'DiStreamer')
-				s.end_headers()
+			if path=='/admin.cgi' and sourceconn.get():
 				if config['icyint']>0:
 					params=urlparse.parse_qs(urlparse.urlparse('http://distreamer'+s.path).query)
-					if params['password']==s.config['password']:
-						titlequeue.add(s.formatTitle(params['song']))
-				s.close()
-			elif path='/stats':
+					if params['mode'][0]=='updinfo' and params['pass'][0]==config['password']:
+						titlequeue.add(s.formatTitle(params['song'][0]))
+			elif path=='/stats':
 				s.send_response(200)
 				s.send_header('Server','DiStreamer')
 				s.send_header('Content-Type','text/plain')
-				s.end_headers
+				s.end_headers()
 				s.wfile.write(json.dumps({'sourceConnected':sourceconn.get()}))
 			else:
 				s.send_response(404)
@@ -124,12 +120,13 @@ def makeSourceServerHandler(store,logger,config,sourceconn,titlequeue,lisclosing
 	class ShoutcastSourceServerHandler(SocketServer.StreamRequestHandler,object):
 		timeout=config['timeout']
 		def handle(self):
-			self.haderror=True ''' Set to false after all the verifications '''
-			password=self.rfile.readline()
+			''' Set to false after all the verifications '''
+			self.haderror=True
+			password=self.rfile.readline().strip()
 			if password!=config['password']:
 				self.wfile.write('invalid password\r\n')
 				return None
-			self.wfile.write('OK2\r\nicy-caps:11\r\n')
+			self.wfile.write('OK2\r\nicy-caps:11\r\n\r\n')
 			headers={}
 			headerscount=0
 			while True:
@@ -150,22 +147,23 @@ def makeSourceServerHandler(store,logger,config,sourceconn,titlequeue,lisclosing
 					break
 				logger.log("Received header - "+header,'ShoutcastSourceServer',4)
 				seppos=header.find(':')
-				k=header[:seppos]
-				v=header[seppos+1:]
+				k=header[:seppos].strip()
+				v=header[seppos+1:].strip()
 				if k.lower()=='icy-metaint':
 					store.setIcyInt(int(v))
-				elif k.lower()[:4]=='icy-' or k.lower()=='content-type':
+				elif (k.lower()[:4]=='icy-' or k.lower()=='content-type') and k.lower() not in ['icy-reset','icy-prebuffer']:
 					headers[k]=v
 			if headerscount==0:
 				s.close()
 				raise ValueError('No headers received')
 			sourceconn.set(True)
 			self.haderror=False
+			logger.log('Source connected','ShoutcastSourceServer',3)
 			store.reset()
 			store.incrementSourceGen()
 			store.setIcyHeaders(headers)
 			store.setIcyInt(config['icyint'])
-			fmanager=ShoutcastSourceServerFragmentsManager()
+			fmanager=ShoutcastSourceServerFragmentsManager(store,logger,config)
 			icyint=config['icyint']
 			if icyint>0:
 				toread=icyint
@@ -187,7 +185,9 @@ def makeSourceServerHandler(store,logger,config,sourceconn,titlequeue,lisclosing
 					chridx=len(title)/16
 					fmanager.push(chr(chridx))
 					fmanager.push(title)
-					store.setIcyTitle(title)
+					fmanager.setIcyPos()
+					if title!='':
+						store.setIcyTitle(title)
 		def finish(self):
 			if not self.haderror:
 				titlequeue.reset()
@@ -209,7 +209,7 @@ class MetadataServerThread(threading.Thread):
 		self.logger.log('Metadata server terminated','ShoutcastSourceServer',2)
 	def close(self):
 		self.logger.log('Closing metadata server','ShoutcastSourceServer',2)
-		self.metadataserver.close()
+		self.metadataserver.server_close()
 
 class ShoutcastSourceServer:
 
