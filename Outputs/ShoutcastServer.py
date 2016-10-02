@@ -28,8 +28,15 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 				s.send_header("icy-metaint", str(store.getIcyInt()))
 				
 		def do_GET(s):
+			fragments=store.getFragments()
+			if len(fragments)<config['minfragments']:
+				s.send_response(404)
+				s.send_header('Server','DiStreamer')
+				s.end_headers()
+				s.wfile.write('No stream yet')
+				return None
 			s.send_response(200)
-			s.send_header("Server", "DiStreamer")
+			s.send_header('Server','DiStreamer')
 			if s.path in s.statpages:
 				s.send_header('content-type','application/json')
 				s.end_headers()
@@ -50,9 +57,6 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 			icytitle=store.getIcyTitle()
 			icyint=store.getIcyInt()
 			firstsent=False
-			fragments=store.getFragments()
-			while len(fragments)<config['minfragments']:
-				time.sleep(0.5)
 			if icyint>0:
 				if icytitle!='':
 					s.wfile.write(''.join(chr(255) for i in xrange(icyint)))
