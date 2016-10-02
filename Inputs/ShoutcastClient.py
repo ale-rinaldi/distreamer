@@ -133,11 +133,7 @@ class ShoutcastClient():
 		self.store.reset()
 		
 		fmanager=ShoutcastClientFragmentsManager(self.store,self.logger,self.config)
-		
-		
-		fragments=self.store.getFragments()
-		icylist=self.store.getIcyList()
-		
+
 		self.logger.log('Stream URL: '+self.config['streamurl'],'ShoutcastClient',3)
 		
 		if self.config['getmetadata']:
