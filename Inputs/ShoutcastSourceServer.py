@@ -77,11 +77,14 @@ def makeMetadataServerHandler(store,logger,config,titlequeue,sourceconn):
 			path=urlparse.urlparse('http://distreamer'+s.path).path
 			if path='/admin.cgi' and sourceconn.get():
 				s.send_response(200)
-				s.send_header("Server", "DiStreamer")
-				s.send_header("Content-Type", "text/plain")
+				s.send_header('Server', 'DiStreamer')
+			elif path='/stats':
+				s.send_response(200)
+				s.send_header('Server', 'DiStreamer')
+				s.send_header('Content-Type', 'text/plain')
 			else:
 				s.send_response(404)
-				s.send_header("Server", "DiStreamer")
+				s.send_header('Server', 'DiStreamer')
 
 		def formatTitle(song):
 			formtitle='StreamTitle=\''+song+'\';'
@@ -95,13 +98,19 @@ def makeMetadataServerHandler(store,logger,config,titlequeue,sourceconn):
 			path=urlparse.urlparse('http://distreamer'+s.path).path
 			if path='/admin.cgi' and sourceconn.get():
 				s.send_response(200)
-				s.send_header("Server", "DiStreamer")
-				s.send_header("Content-Type", "text/plain")
+				s.send_header('Server', 'DiStreamer')
 				s.end_headers()
 				if config['icyint']>0:
 					params=urlparse.parse_qs(urlparse.urlparse('http://distreamer'+s.path).query)
 					if params['password']==s.config['password']:
 						titlequeue.add(s.formatTitle(params['song']))
+				s.close()
+			elif path='/stats':
+				s.send_response(200)
+				s.send_header('Server','DiStreamer')
+				s.send_header('Content-Type','text/plain')
+				s.end_headers
+				s.wfile.write(json.dumps({'sourceConnected':sourceconn.get()}))
 			else:
 				s.send_response(404)
 				s.send_header("Server", "DiStreamer")
