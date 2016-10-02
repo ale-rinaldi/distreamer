@@ -221,7 +221,7 @@ class ShoutcastSourceServer:
 	def getDefaultConfig(self):
 		return {
 			'hostname': '0.0.0.0',
-			'port': '8080',
+			'port': 8080,
 			'password': 'distreamer',
 			'fragmentsnumber': 5,
 			'fragmentsize': 81920,
@@ -240,11 +240,11 @@ class ShoutcastSourceServer:
 		sourceconn=SourceConnectedManager()
 		titlequeue=ShoutcastSourceServerTitleQueue()
 		metadatahandler=makeMetadataServerHandler(self.store,self.logger,self.config,sourceconn,titlequeue)
-		metadataserver=MetadataServer((self.config['hostname'], int(self.config['port'])), metadatahandler)
+		metadataserver=MetadataServer((self.config['hostname'], self.config['port']), metadatahandler)
 		self.metadatathread=MetadataServerThread(metadataserver,self.logger,self.lisclosing)
 		self.logger.log('Metadata server initialized','ShoutcastSourceServer',2)
 		sourcehandler=makeSourceServerHandler(self.store,self.logger,self.config,sourceconn,titlequeue,self.lisclosing)
-		self.sourceserver=SourceServer((self.config['hostname'],int(self.config['port'])+1), sourcehandler)
+		self.sourceserver=SourceServer((self.config['hostname'],self.config['port']+1), sourcehandler)
 		self.logger.log('Source server initialized','ShoutcastSourceServer',2)
 		self.metadatathread.start()
 		try:

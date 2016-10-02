@@ -148,7 +148,7 @@ class DiStreamerRevServer:
 	def getDefaultConfig(self):
 		return {
 			'hostname': '0.0.0.0',
-			'port': '5080',
+			'port': 5080,
 			'password': ''
 		}
 		
@@ -160,7 +160,7 @@ class DiStreamerRevServer:
 		if not self.config_set:
 			raise ValueError('Config not set')
 		handler=makeServerHandler(self.store,self.logger,self.config)
-		self.httpd = ThreadingSimpleServer((self.config['hostname'], int(self.config['port'])), handler)
+		self.httpd = ThreadingSimpleServer((self.config['hostname'], self.config['port']), handler)
 		self.logger.log('Started','DiStreamerRevServer',2)
 		try:
 			self.httpd.serve_forever()

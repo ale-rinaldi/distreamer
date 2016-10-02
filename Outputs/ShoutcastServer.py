@@ -119,7 +119,7 @@ class ShoutcastServer:
 	def getDefaultConfig(self):
 		return {
 			'hostname': '0.0.0.0',
-			'port': '8080',
+			'port': 8080,
 			'minfragments': 5
 		}
 		
@@ -134,7 +134,7 @@ class ShoutcastServer:
 		self.lisclosing=[False]
 		statmgr=ShoutcastServerStatsManager()
 		handler=makeServerHandler(self.store,self.logger,self.config,self.lisclosing,statmgr)
-		self.httpd = ThreadingSimpleServer((self.config['hostname'], int(self.config['port'])), handler)
+		self.httpd = ThreadingSimpleServer((self.config['hostname'], self.config['port']), handler)
 		self.logger.log('Started','ShoutcastServer',2)
 		try:
 			self.httpd.serve_forever()
