@@ -1,4 +1,4 @@
-# DiStreamer 2.0 ALPHA
+# DiStreamer 2.0 BETA
 DiStreamer is a simple Python script specifically designed to stream audio over unstable connections, making its best to avoid interruptions in sound. It works by splitting audio data into a set of fragments of a given size.  
 It is possible to run an unlimited number of istances of DiStreamer concurrently, each with a different config file.  
 For an instance to run you need to set an INPUT and OUTPUT module. The INPUT module will generate the data fragments, and the OUTPUT will serve it in the way you like.  
