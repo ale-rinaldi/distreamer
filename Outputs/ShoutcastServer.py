@@ -133,7 +133,8 @@ class ShoutcastServer:
 	
 	def run(self):
 		if not self.config_set:
-			raise ValueError('Config not set')
+			self.logger.log("Config not set",'ShoutcastServer',1)
+			return None
 		self.logger.log('Starting','ShoutcastServer',2)
 		self.lisclosing=[False]
 		statmgr=ShoutcastServerStatsManager()

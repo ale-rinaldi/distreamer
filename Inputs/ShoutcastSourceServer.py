@@ -158,7 +158,7 @@ def makeSourceServerHandler(store,logger,config,sourceconn,titlequeue,lisclosing
 				raise ValueError('No headers received')
 			sourceconn.set(True)
 			self.haderror=False
-			logger.log('Source connected','ShoutcastSourceServer',3)
+			logger.log('Source connected','ShoutcastSourceServer',4)
 			store.reset()
 			store.incrementSourceGen()
 			store.setIcyHeaders(headers)
@@ -237,7 +237,8 @@ class ShoutcastSourceServer:
 
 	def run(self):
 		if not self.config_set:
-			raise ValueError('Config not set')
+			self.logger.log('Config not set','ShoutcastSourceServer',1)
+			return None
 		sourceconn=SourceConnectedManager()
 		titlequeue=ShoutcastSourceServerTitleQueue()
 		metadatahandler=makeMetadataServerHandler(self.store,self.logger,self.config,sourceconn,titlequeue)

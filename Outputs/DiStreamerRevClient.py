@@ -21,6 +21,9 @@ class DiStreamerRevClient():
 		self.config_set=True
 
 	def run(self):
+		if not self.config_set:
+			self.logger.log("Config not set",'DiStreamerRevClient',1)
+			return None
 		while not self.isclosing:
 			if self.config['password']!='':
 				result=urllib2.urlopen(urllib2.Request(self.config['serverurl']+'/list/'+self.config['password'],headers={'User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
@@ -30,7 +33,7 @@ class DiStreamerRevClient():
 			cslist=result.read()
 			if len(cslist)!=int(exclen):
 				self.logger.log("Incomplete read of list",'DiStreamerRevClient',2)
-				return False
+				return None
 			infolist=json.loads(cslist)
 			remotelist=infolist['fragmentslist']
 			fragments=self.store.getFragments()
@@ -45,7 +48,7 @@ class DiStreamerRevClient():
 					res=result.read()
 					if res!='OK':
 						self.logger.log('Failed to send block '+str(fragn),'DiStreamerRevClient',2)
-						return False
+						return None
 					self.logger.log('Sent fragment '+str(fragn),'DiStreamerRevClient',3)
 			if not self.isclosing:
 				flist=self.store.getFragments().keys()
@@ -67,4 +70,4 @@ class DiStreamerRevClient():
 
 	def close(self):
 		self.isclosing=True
-		self.logger.log('DiStreamerRevClient is terminating, this could need some time','ShoutcastClient',3)
+		self.logger.log('DiStreamerRevClient is terminating, this could need some time','ShoutcastClient',2)

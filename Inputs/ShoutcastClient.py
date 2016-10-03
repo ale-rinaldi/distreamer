@@ -122,13 +122,15 @@ class ShoutcastClient():
 		self.config_set=True
 
 	def run(self):
-		self.logger.log('Started','ShoutcastClient',3)
 		if not self.config_set:
-			raise ValueError("Configuration not set")
+			self.logger.log('Config not set','ShoutcastClient',1)
+			return None
 
 		if self.config['streamurl']=='':
-			raise ValueError("Stream URL not defined")
+			self.logger.log('Stream URL not defined','ShoutcastClient',1)
+			return None
 
+		self.logger.log('Started','ShoutcastClient',2)
 		self.store.incrementSourceGen()
 		self.store.reset()
 		
@@ -156,7 +158,8 @@ class ShoutcastClient():
 				if self.isclosing:
 					return None
 			if len(buf)!=toread:
-				raise ValueError("Incomplete read of block")
+				self.logger.log('Incomplete read of block','ShoutcastClient',2)
+				return None
 			fmanager.push(buf)
 			if icyint>0:
 				ordicylen=stream.read(1)
@@ -171,6 +174,6 @@ class ShoutcastClient():
 		
 	def close(self):
 		self.isclosing=True
-		self.logger.log('ShoutcastClient is terminating, this could need some time','ShoutcastClient',3)
+		self.logger.log('ShoutcastClient is terminating, this could need some time','ShoutcastClient',2)
 		if self.socket:
 			self.socket.close()

@@ -27,6 +27,10 @@ class DiStreamerClient():
 		return dict((int(k), self.keysToInt(v)) for k, v in dictionary.items())
 	
 	def run(self):
+		if not self.config_set:
+			self.logger.log('Config not set','DiStreamerClient',1)
+			return None
+		self.logger.log('Started','DiStreamerClient',2)
 		while not self.isclosing:
 			self.logger.log('Requesting list','DiStreamerClient',4)
 			if self.config['password']!='':
@@ -76,4 +80,4 @@ class DiStreamerClient():
 
 	def close(self):
 		self.isclosing=True
-		self.logger.log('DiStreamerClient is terminating, this could need some time','ShoutcastClient',3)
+		self.logger.log('DiStreamerClient is terminating, this could need some time','ShoutcastClient',2)

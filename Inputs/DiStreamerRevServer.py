@@ -158,7 +158,8 @@ class DiStreamerRevServer:
 	
 	def run(self):
 		if not self.config_set:
-			raise ValueError('Config not set')
+			self.logger.log('Config not set','DiStreamerRevServer',1)
+			return None
 		handler=makeServerHandler(self.store,self.logger,self.config)
 		self.httpd = ThreadingSimpleServer((self.config['hostname'], self.config['port']), handler)
 		self.logger.log('Started','DiStreamerRevServer',2)
