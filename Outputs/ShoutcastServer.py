@@ -28,6 +28,7 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 				s.send_header("icy-metaint", str(store.getIcyInt()))
 				
 		def do_GET(s):
+			s.added=False
 			fragments=store.getFragments()
 			if len(fragments)<config['minfragments']:
 				s.send_response(404)
@@ -43,6 +44,7 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 				s.wfile.write(json.dumps({'connectedClients':statmgr.get()}))
 				return None
 			statmgr.add()
+			s.added=True
 			icyheaders=store.getIcyHeaders()
 			for header in icyheaders:
 				s.send_header(header,icyheaders[header])
@@ -109,7 +111,7 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 			return
 		
 		def finish(s):
-			if s.path not in s.statpages:
+			if s.added:
 				statmgr.rem()
 
 	return shoutcastServerHandler
