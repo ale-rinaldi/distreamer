@@ -5,6 +5,7 @@ class DiStreamerLogger:
 		self.outputlevel=int(config['outputlevel'])
 		self.logfile=config['logfile']
 		self.loglevel=int(config['loglevel'])
+		self.logerror=False
 		self.islogging=False
 	
 	def log(self,string,origin,level):
@@ -14,7 +15,13 @@ class DiStreamerLogger:
 		fmtstring=str(time.asctime())+": ["+origin+"] "+string
 		if level<=self.outputlevel:
 			print fmtstring
-		if level<=self.loglevel and self.logfile!='' and os.path.isdir(os.path.dirname(self.logfile)):
-			with open(self.logfile, 'a') as file:
+		if level<=self.loglevel and not self.logerror:
+			try:
+				file=open(self.logfile, 'a')
 				file.write(fmtstring+'\r\n')
+				file.close()
+			except:
+				print "!!!WARNING!!! Cannot write to log file: "+self.logfile
+				self.logerror=True
+				pass
 		self.islogging=False
