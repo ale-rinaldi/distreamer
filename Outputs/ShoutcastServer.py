@@ -31,6 +31,14 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 		def do_GET(s):
 			s.added=False
 			fragments=store.getFragments()
+			if s.path in s.statpages:
+				s.send_header('content-type','application/json')
+				s.end_headers()
+				s.wfile.write(json.dumps({
+					'connectedClients':statmgr.get(),
+					'fragmentsList':fragments.keys()
+					}))
+				return None
 			if len(fragments)<config['minfragments']:
 				s.send_response(404)
 				s.send_header('Server','DiStreamer')
@@ -39,11 +47,6 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 				return None
 			s.send_response(200)
 			s.send_header('Server','DiStreamer')
-			if s.path in s.statpages:
-				s.send_header('content-type','application/json')
-				s.end_headers()
-				s.wfile.write(json.dumps({'connectedClients':statmgr.get()}))
-				return None
 			statmgr.add()
 			s.added=True
 			icyheaders=store.getIcyHeaders()
