@@ -110,7 +110,7 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 						tosend=tosend+fragments[fragn]
 						sentlist.append(fragn)
 				for sentn in sentlist:
-					if not fragments.has_key(sentn):
+					if not sentn in locallist:
 						sentlist.remove(sentn)
 						logger.log('Removed from sent list: '+str(sentn),'ShoutcastServer',4)
 				s.wfile.write(tosend)
