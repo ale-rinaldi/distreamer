@@ -68,10 +68,13 @@ except KeyboardInterrupt:
 		pass
 	currtime=time.time()
 	while (outputthread.isAlive() or inputthread.isAlive()):
-		if time.time()>currtime+5:
-			logger.log('One of the threads did not exit in 5 seconds. Killing the process.','Main',2)
-			break
-		time.sleep(0.3)
+		try:
+			if time.time()>currtime+5:
+				logger.log('One of the threads did not exit in 5 seconds. Killing the process.','Main',2)
+				break
+			time.sleep(0.3)
+		except:
+			pass
 	os._exit(0)
 except:
 	logger.log('Unhandled error, DiStreamer must be closed. Sorry...','Main',1)
@@ -79,8 +82,11 @@ except:
 	outputthread.close()
 	currtime=time.time()
 	while (outputthread.isAlive() or inputthread.isAlive()):
-		if time.time()>currtime+5:
-			logger.log('One of the threads did not exit in 5 seconds. Killing the process.','Main',2)
-			break
-		time.sleep(0.3)
+		try:
+			if time.time()>currtime+5:
+				logger.log('One of the threads did not exit in 5 seconds. Killing the process.','Main',2)
+				break
+			time.sleep(0.3)
+		except:
+			pass
 	os._exit(0)
