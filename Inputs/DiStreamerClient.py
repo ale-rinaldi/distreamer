@@ -30,6 +30,9 @@ class DiStreamerClient():
 		if not self.config_set:
 			self.logger.log('Config not set','DiStreamerClient',1)
 			return None
+		if self.config['serverurl']=='':
+			self.logger.log('Server URL not defined','DiStreamerClient',1)
+			return None
 		self.logger.log('Started','DiStreamerClient',2)
 		while not self.isclosing:
 			self.logger.log('Requesting list','DiStreamerClient',4)

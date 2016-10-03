@@ -22,7 +22,10 @@ class DiStreamerRevClient():
 
 	def run(self):
 		if not self.config_set:
-			self.logger.log("Config not set",'DiStreamerRevClient',1)
+			self.logger.log('Config not set','DiStreamerRevClient',1)
+			return None
+		if self.config['serverurl']=='':
+			self.logger.log('Server URL not defined','DiStreamerRevClient',1)
 			return None
 		while not self.isclosing:
 			if self.config['password']!='':
