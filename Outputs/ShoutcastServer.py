@@ -32,6 +32,7 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 			s.added=False
 			fragments=store.getFragments()
 			if s.path in s.statpages:
+				s.send_response(200)
 				s.send_header('content-type','application/json')
 				s.end_headers()
 				s.wfile.write(json.dumps({
@@ -72,6 +73,7 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 				while not firstsent:
 					reconnect=store.getSourceGen()
 					if locreconnect!=reconnect or reconnect<=0:
+						logger.log('Local source gen: '+str(locreconnect)+', source gen: '+str(reconnect)+'. Closing stream to client.','ShoutcastServer',2)
 						return None
 					locallist=fragments.keys()
 					locallist.sort()
@@ -94,6 +96,7 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 			while not lisclosing[0]:
 				reconnect=store.getSourceGen()
 				if locreconnect!=reconnect or reconnect<=0:
+					logger.log('Local source gen: '+str(locreconnect)+', source gen: '+str(reconnect)+'. Closing stream to client.','ShoutcastServer',2)
 					return None
 				tosend=''
 				locallist=fragments.keys()
@@ -101,6 +104,7 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 				for fragn in locallist:
 					if fragn not in sentlist:
 						if fragn!=lastsent+1:
+							logger.log('Expected fragment: '+str(lastsent+1)+', first available: '+str(fragn)+'. Closing stream to client.','ShoutcastServer',2)
 							return None
 						lastsent=fragn
 						tosend=tosend+fragments[fragn]
