@@ -157,18 +157,27 @@ class ShoutcastClient():
 			except:
 				if self.isclosing:
 					return None
+				pass
 			if len(buf)!=toread:
 				self.logger.log('Incomplete read of block','ShoutcastClient',2)
 				return None
 			fmanager.push(buf)
+			buf=''
 			if icyint>0:
 				ordicylen=stream.read(1)
 				fmanager.push(ordicylen)
 				icylen=ord(ordicylen)*16
-				title=stream.read(icylen)
-				if title!='':
+				if icylen>0:
+					try:
+						title=stream.read(icylen)
+					except:
+						if self.isclosing:
+							return None
+					if len(title)!=icylen:
+						self.logger.log('Incomplete read of title','ShoutcastClient',2)
+						return None
 					self.store.setIcyTitle(title)
-				fmanager.push(title)
+					fmanager.push(title)
 				fmanager.setIcyPos()
 		self.logger.log('ShoutcastClient terminated normally','ShoutcastClient',2)
 		
