@@ -19,6 +19,7 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 	class shoutcastServerHandler(BaseHTTPServer.BaseHTTPRequestHandler,object):
 		statpages=['/stats','/favicon.ico']
 		def do_HEAD(s):
+			s.added=False
 			s.send_response(200)
 			s.send_header("Server", "DiStreamer")
 			icyheaders=store.getIcyHeaders()
