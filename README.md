@@ -20,4 +20,4 @@ So, to use DiStreamer you just:
 - Download DiStreamer
 - Rename distreamer.template.conf in distreamer.conf
 - Edit distreamer.conf following the comments
-- Start distreamer-client or distreamer-server
+- Launch "python distreamer.py" in a shell
