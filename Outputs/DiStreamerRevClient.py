@@ -40,7 +40,17 @@ class DiStreamerRevClient():
 			infolist=json.loads(cslist)
 			remotelist=infolist['fragmentslist']
 			fragments=self.store.getFragments()
-			for fragn in fragments.keys():
+			fkeys=fragments.keys()
+			fkeys.sort()
+			tosend=json.dumps({
+					'fragmentslist': fkeys,
+					'icyint': self.store.getIcyInt(),
+					'icylist': self.store.getIcyList(),
+					'icyheaders': self.store.getIcyHeaders(),
+					'icytitle': self.store.getIcyTitle().encode('base64'),
+					'sourcegen': self.store.getSourceGen()
+				})
+			for fragn in fkeys:
 				if self.isclosing:
 					break
 				if not fragn in remotelist:
@@ -54,16 +64,6 @@ class DiStreamerRevClient():
 						return None
 					self.logger.log('Sent fragment '+str(fragn),'DiStreamerRevClient',3)
 			if not self.isclosing:
-				flist=self.store.getFragments().keys()
-				flist.sort()
-				tosend=json.dumps({
-					'fragmentslist': flist,
-					'icyint': self.store.getIcyInt(),
-					'icylist': self.store.getIcyList(),
-					'icyheaders': self.store.getIcyHeaders(),
-					'icytitle': self.store.getIcyTitle().encode('base64'),
-					'sourcegen': self.store.getSourceGen()
-				})
 				if self.config['password']!='':
 					result=urllib2.urlopen(urllib2.Request(self.config['serverurl']+'/list/'+self.config['password'],tosend,headers={'User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
 				else:
