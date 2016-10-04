@@ -74,7 +74,7 @@ class DiStreamerRevClient():
 					result=urllib2.urlopen(urllib2.Request(self.config['serverurl']+'/'+str(fragn),localfrags[fragn],headers={'User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
 				res=result.read()
 				if res!='OK':
-					self.logger.log('Failed to send block '+str(fragn),'DiStreamerRevClient',2)
+					self.logger.log('Failed to send fragment '+str(fragn),'DiStreamerRevClient',2)
 					return None
 				self.logger.log('Sent fragment '+str(fragn),'DiStreamerRevClient',3)
 			if not self.isclosing:
