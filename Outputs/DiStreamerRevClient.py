@@ -56,7 +56,9 @@ class DiStreamerRevClient():
 					break
 				if not fragn in remotelist:
 					localfrags[fragn]=fragments[fragn]
-			for fragn in localfrags.keys():
+			locfkeys=localfrags.keys()
+			locfkeys.sort()
+			for fragn in locfkeys:
 				if self.config['password']:
 					result=urllib2.urlopen(urllib2.Request(self.config['serverurl']+'/'+str(fragn)+'/'+self.config['password'],localfrags[fragn],headers={'User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
 				else:
