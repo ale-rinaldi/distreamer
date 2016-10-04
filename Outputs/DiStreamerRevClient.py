@@ -51,10 +51,10 @@ class DiStreamerRevClient():
 					'sourcegen': self.store.getSourceGen()
 				})
 			if len(remotelist)>0:
-				expfirst=min(remotelist)+1
+				expfirst=max(remotelist)+1
 			else:
 				expfirst=1
-			if expfirst!=1 and not expfirst in fkeys:
+			if expfirst!=1 and expfirst not in fkeys:
 				if self.config['password']!='':
 					result=urllib2.urlopen(urllib2.Request(self.config['serverurl']+'/list/'+self.config['password'],tosend,headers={'User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
 				else:
