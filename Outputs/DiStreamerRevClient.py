@@ -87,6 +87,12 @@ class DiStreamerRevClient():
 				listsent=False
 			# Send every fragment in the local list
 			for fragn in locfkeys:
+				# Calculate the minimum expected fragment in the global list
+				expminfrag=max(locfkeys)+1
+				# If it has already been deleted from the global list, don't waste time and give up
+				if len(self.store.getFragments().keys())>0 and min(self.store.getFragments().keys())>expminfrag:
+					self.logger.log('Fragment '+str(expminfrag)+' is not in the global list. Closing.','DiStreamerRevClient',2)
+					return None
 				if self.config['password']:
 					result=urllib2.urlopen(urllib2.Request(self.config['serverurl']+'/'+str(fragn)+'/'+self.config['password'],localfrags[fragn],headers={'User-Agent':'DiStreamer'}), timeout=self.config['httptimeout'])
 				else:
