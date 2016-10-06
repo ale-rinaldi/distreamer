@@ -40,7 +40,7 @@ class DiStreamerPersClient():
 		return {
 			'serverurl': '',
 			'password': '',
-			'httptimeout': 10
+			'httptimeout': 5
 		}
 	
 	def setConfig(self,config):
@@ -116,7 +116,7 @@ class DiStreamerPersClient():
 				self.store.setSourceGen(infolist['sourcegen'])
 				self.store.setIcyTitle(infolist['icytitle'].decode('base64'))
 				list=infolist['fragmentslist']
-				for localfragn in self.store.getFragments().keys():
+				for localfragn in fragments.keys():
 					if(localfragn not in list):
 						del fragments[localfragn]
 						self.logger.log('Deleted fragment '+str(localfragn),'DiStreamerPersClient',3)
