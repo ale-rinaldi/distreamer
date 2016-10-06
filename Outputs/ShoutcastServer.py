@@ -70,8 +70,9 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 					chridx=len(icytitle)/16
 					s.wfile.write(chr(chridx))
 					s.wfile.write(icytitle)
+				icylist=store.getIcyList()
 				while not firstsent:
-					if len(icylist.keys()==0)
+					if len(icylist.keys())==0:
 						continue
 					reconnect=store.getSourceGen()
 					if locreconnect!=reconnect or reconnect<=0:
@@ -79,7 +80,6 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 						return None
 					locallist=fragments.keys()
 					locallist.sort()
-					icylist=store.getIcyList()
 					for fragn in locallist:
 						if icylist.has_key(fragn):
 							icyblkmin=min(icylist[fragn])
