@@ -53,7 +53,7 @@ class DiStreamerPersRevClient():
 
 		self.logger.log('Started','DiStreamerPersRevClient',2)
 		
-		stream=self._PersRevServerConnect(self.config['serverurl']+'/',self.config['httptimeout'])
+		stream=self._PersRevServerConnect(self.config['serverurl']+'/',self.config['timeout'])
 		self.socket.sendall(self.config['password']+'\r\n')
 		ans=stream.readline()
 		aans=ans.split('|')
