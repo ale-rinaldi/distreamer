@@ -71,12 +71,12 @@ class ShoutcastClient():
 		self.logger.log('Connected','ShoutcastClient',4)
 		f=s.makefile()
 		s.settimeout(timeout)
-		s.send('GET '+path+ ' HTTP/1.1\r\n')
-		s.send('Host: '+u.netloc+'\r\n')
-		s.send('Accept-Encoding: identity\r\n')
+		s.sendall('GET '+path+ ' HTTP/1.1\r\n')
+		s.sendall('Host: '+u.netloc+'\r\n')
+		s.sendall('Accept-Encoding: identity\r\n')
 		for key in headers.keys():
 			s.send(key+': '+headers[key]+'\r\n')
-		s.send('\r\n')
+		s.sendall('\r\n')
 		lstatus=f.readline()
 		if lstatus.split(' ')[1]!='200':
 			s.close()
