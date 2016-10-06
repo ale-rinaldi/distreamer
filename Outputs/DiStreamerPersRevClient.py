@@ -34,7 +34,7 @@ class DiStreamerPersRevClient():
 		return {
 			'serverurl': '',
 			'password': '',
-			'httptimeout': 5,
+			'timeout': 5,
 			'interval': 1
 		}
 	
