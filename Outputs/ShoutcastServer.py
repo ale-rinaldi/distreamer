@@ -71,6 +71,8 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 					s.wfile.write(chr(chridx))
 					s.wfile.write(icytitle)
 				while not firstsent:
+					if len(icylist.keys()==0)
+						continue
 					reconnect=store.getSourceGen()
 					if locreconnect!=reconnect or reconnect<=0:
 						logger.log('Local source gen: '+str(locreconnect)+', source gen: '+str(reconnect)+'. Closing stream to client.','ShoutcastServer',2)
