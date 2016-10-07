@@ -40,7 +40,7 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 					'fragmentsList':fragments.keys()
 					}))
 				return None
-			if len(fragments)<config['minfragments'] or store.getIcyInt()<0:
+			if len(fragments)<config['minfragments'] or store.getIcyInt()<0 or len(icylist.keys())==0:
 				s.send_response(404)
 				s.send_header('Server','DiStreamer')
 				s.end_headers()
@@ -72,9 +72,6 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 					s.wfile.write(icytitle)
 				icylist=store.getIcyList()
 				while not firstsent:
-					if len(icylist.keys())==0:
-						time.sleep(0.5)
-						continue
 					reconnect=store.getSourceGen()
 					if locreconnect!=reconnect or reconnect<=0:
 						logger.log('Local source gen: '+str(locreconnect)+', source gen: '+str(reconnect)+'. Closing stream to client.','ShoutcastServer',2)
