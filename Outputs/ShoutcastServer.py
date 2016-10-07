@@ -40,7 +40,7 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 					'fragmentsList':fragments.keys()
 					}))
 				return None
-			if len(fragments)<config['minfragments'] or store.getIcyInt()<0 or len(icylist.keys())==0:
+			if len(fragments)<config['minfragments'] or store.getIcyInt()<0 or (store.getIcyInt()>0 and len(store.getIcyList().keys())==0):
 				s.send_response(404)
 				s.send_header('Server','DiStreamer')
 				s.end_headers()

@@ -7,7 +7,7 @@ class MetadataServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
 	pass
 
 class persRevServerActiveRequestManager:
-	def __init__:
+	def __init__(self):
 		self.object=None
 	def set(self,object):
 		self.object=object
