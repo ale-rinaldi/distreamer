@@ -64,6 +64,8 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 			icytitle=store.getIcyTitle()
 			icyint=store.getIcyInt()
 			firstsent=False
+			while store.getIcyInt()<0:
+				time.sleep(0.5)
 			if icyint>0:
 				if icytitle!='':
 					s.wfile.write(''.join(chr(255) for i in xrange(icyint)))
@@ -73,6 +75,7 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 				icylist=store.getIcyList()
 				while not firstsent:
 					if len(icylist.keys())==0:
+						time.sleep(0.5)
 						continue
 					reconnect=store.getSourceGen()
 					if locreconnect!=reconnect or reconnect<=0:

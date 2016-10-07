@@ -88,9 +88,8 @@ def makePersRevServerHandler(store,logger,config,lisclosing):
 						pass
 					if x>=0:
 						if len(fragments.keys())>0 and x>max(fragments.keys())+1:
-							logger.log('Expected fragment: '+str(max(fragments.keys()))+', received: '+str(x)+'. Resetting store.','DiStreamerPersRevServer',2)
-							store.reset()
-							fragments=store.getFragments()
+							logger.log('Expected fragment: '+str(max(fragments.keys()))+', received: '+str(x)+'. Clearing fragments in store.','DiStreamerPersRevServer',2)
+							store.clearFragmentsList()
 						fragments[x]=content
 						logger.log('Received fragment '+str(x),'DiStreamerPersRevServer',3)
 	return DiStreamerPersRevServerHandler

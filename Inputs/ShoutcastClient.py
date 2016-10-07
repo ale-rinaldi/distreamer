@@ -103,6 +103,8 @@ class ShoutcastClient():
 				self.store.setIcyInt(int(v))
 			elif k.lower()[:4]=='icy-' or k.lower()=='content-type':
 				headers[k]=v
+		if self.store.getIcyInt()<0:
+			self.store.setIcyInt(0)
 		self.store.setIcyHeaders(headers)
 		self.socket=s
 		self.socketfile=f

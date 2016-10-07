@@ -1,14 +1,21 @@
 class DiStreamerStore:
 	def __init__(self):
 		self.sourcegen=0
-		self.reset()
-
-	def reset(self):
 		self.fragments={}
 		self.icylist={}
 		self.icyheaders={}
-		self.icyint=0
+		self.icyint=-1
 		self.icytitle=''
+
+	def reset(self):
+		self.fragments.clear()
+		self.icylist.clear()
+		self.icyheaders.clear()
+		self.icyint=-1
+		self.icytitle=''
+		
+	def clearFragmentsList(self):
+		self.fragments.clear()
 
 	def getFragments(self):
 		return self.fragments

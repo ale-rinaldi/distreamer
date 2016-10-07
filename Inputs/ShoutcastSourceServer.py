@@ -149,9 +149,7 @@ def makeSourceServerHandler(store,logger,config,sourceconn,titlequeue,lisclosing
 				seppos=header.find(':')
 				k=header[:seppos].strip()
 				v=header[seppos+1:].strip()
-				if k.lower()=='icy-metaint':
-					store.setIcyInt(int(v))
-				elif (k.lower()[:4]=='icy-' or k.lower()=='content-type') and k.lower() not in ['icy-reset','icy-prebuffer']:
+				if (k.lower()[:4]=='icy-' or k.lower()=='content-type') and k.lower() not in ['icy-metaint', 'icy-reset','icy-prebuffer']:
 					headers[k]=v
 			if headerscount==0:
 				s.close()
