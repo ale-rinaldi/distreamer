@@ -6,7 +6,15 @@ class SourceServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 class MetadataServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
 	pass
 
-def makePersRevServerHandler(store,logger,config,lisclosing):
+class persRevServerActiveRequestManager:
+	def __init__:
+		self.object=None
+	def set(self,object):
+		self.object=object
+	def get(self):
+		return self.object
+	
+def makePersRevServerHandler(store,logger,config,actreq,lisclosing):
 	class DiStreamerPersRevServerHandler(SocketServer.StreamRequestHandler,object):
 		timeout=config['timeout']
 		
@@ -25,6 +33,7 @@ def makePersRevServerHandler(store,logger,config,lisclosing):
 			fkeys=fragments.keys()
 			fkeys.sort()
 			self.wfile.write('ok|'+'/'.join(map(str,fkeys))+'\r\n')
+			actreq.set(self)
 			while not lisclosing[0]:
 				info=''
 				try:
@@ -65,6 +74,9 @@ def makePersRevServerHandler(store,logger,config,lisclosing):
 					else:
 						logger.log('Error in reading final bytes','DiStreamerPersRevServer',2)
 						return None
+				if actreq.get() is not self:
+					logger.log('I am an old instance. I quit.','DiStreamerPersRevServer',4)
+					return None
 				if action=='err':
 					logger.log('Error from client: '+content,'DiStreamerPersRevServer',2)
 					return None
@@ -119,7 +131,8 @@ class DiStreamerPersRevServer:
 		if not self.config_set:
 			self.logger.log('Config not set','DiStreamerPersRevServer',1)
 			return None
-		srvhandler=makePersRevServerHandler(self.store,self.logger,self.config,self.lisclosing)
+		actreq=persRevServerActiveRequestManager()
+		srvhandler=makePersRevServerHandler(self.store,self.logger,self.config,actreq,self.lisclosing)
 		self.srv=SourceServer((self.config['hostname'],self.config['port']), srvhandler)
 		self.logger.log('Server initialized','DiStreamerPersRevServer',2)
 		try:
