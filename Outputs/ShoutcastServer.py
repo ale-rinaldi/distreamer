@@ -40,7 +40,7 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 					'fragmentsList':fragments.keys()
 					}))
 				return None
-			if len(fragments)<config['minfragments']:
+			if len(fragments)<config['minfragments'] or store.getIcyInt()<0:
 				s.send_response(404)
 				s.send_header('Server','DiStreamer')
 				s.end_headers()
@@ -64,8 +64,6 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
 			icytitle=store.getIcyTitle()
 			icyint=store.getIcyInt()
 			firstsent=False
-			while store.getIcyInt()<0:
-				time.sleep(0.5)
 			if icyint>0:
 				if icytitle!='':
 					s.wfile.write(''.join(chr(255) for i in xrange(icyint)))
