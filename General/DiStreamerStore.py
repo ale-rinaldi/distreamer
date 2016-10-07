@@ -21,19 +21,28 @@ class DiStreamerStore:
 		return self.fragments
 
 	def setFragments(self,fragments):
-		self.fragments=fragments
+		temp={}
+		temp.update(fragments)
+		self.fragments.clear()
+		self.fragments.update(temp)
 
 	def getIcyList(self):
 		return self.icylist
 
 	def setIcyList(self,icylist):
-		self.icylist=icylist
+		temp={}
+		temp.update(icylist)
+		self.icylist.clear()
+		self.icylist.update(temp)
 
 	def getIcyHeaders(self):
 		return self.icyheaders
 
 	def setIcyHeaders(self,icyheaders):
-		self.icyheaders=icyheaders
+		temp={}
+		temp.update(icyheaders)
+		self.icyheaders.clear()
+		self.icyheaders.update(temp)
 
 	def getIcyInt(self):
 		return self.icyint
