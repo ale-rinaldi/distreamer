@@ -130,6 +130,7 @@ class DiStreamerPersClient():
 					if len(fragments.keys())>0 and x>max(fragments.keys())+1:
 						self.logger.log('Expected fragment: '+str(max(fragments.keys()))+', received: '+str(x)+'. Resetting store.','DiStreamerPersClient',2)
 						self.store.reset()
+						fragments=self.store.getFragments()
 					fragments[x]=content
 					self.logger.log('Received fragment '+str(x),'DiStreamerPersClient',3)
 
