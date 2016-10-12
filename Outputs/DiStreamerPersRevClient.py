@@ -69,32 +69,47 @@ class DiStreamerPersRevClient():
 		else:
 			lastsent=0
 		while not self.isclosing:
-			tosend=''
-			locallist=fragments.keys()
-			locallist.sort()
+			localfrags={}
+			fkeys=fragments.keys()
+			fkeys.sort()
 			list=json.dumps({
-				'fragmentslist': locallist,
+				'fragmentslist': fkeys,
 				'icyint': self.store.getIcyInt(),
 				'icylist': self.store.getIcyList(),
 				'icyheaders': self.store.getIcyHeaders(),
 				'icytitle': self.store.getIcyTitle().encode('base64'),
 				'sourcegen': self.store.getSourceGen()
 			})
-			for fragn in locallist:
+			for fragn in fkeys:
+				if self.isclosing:
+					break
 				if fragn not in sentlist:
 					if fragn!=lastsent+1:
-						self.logger.log('Expected fragment: '+str(lastsent+1)+', first available: '+str(fragn)+'. Closing stream to server.','DiStreamerPersRevClient',2)
+						self.logger.log('Expected fragment: '+str(lastsent+1)+', next available: '+str(fragn)+'. Closing stream to server.','DiStreamerPersRevClient',2)
 						return None
-					tosend+=str(fragn)+'|'+str(len(fragments[fragn]))+'\r\n'+fragments[fragn]+'\r\n'
+					localfrags[fragn]=fragments[fragn]
 					lastsent=fragn
-					self.logger.log('Sent fragment '+str(fragn),'DiStreamerPersRevClient',3)
-					sentlist.append(fragn)
-			tosend+='list|'+str(len(list))+'\r\n'+list+'\r\n'
+			locfkeys=localfrags.keys()
+			locfkeys.sort()
+			for fragn in locfkeys:
+				if min(fragments.keys())>max(locfkeys)+1:
+					self.logger.log('Expected fragment: '+str(max(locfkeys))+', first available: '+str(min(fragments.keys()))+'. Closing stream to server.','DiStreamerPersRevClient',2)
+					return None
+				tosend=str(fragn)+'|'+str(len(localfrags[fragn]))+'\r\n'+localfrags[fragn]+'\r\n'
+				time1=time.time()
+				self.socket.sendall(tosend)
+				time2=time.time()
+				if time2-time1>0:
+					speed=str(round((len(tosend)/(time2-time1))/1024.0,2))
+				else:
+					speed='inf.'
+				self.logger.log('Sent fragment '+str(fragn)+' in '+str(round(time2-time1,2))+'s ('+speed+' kB/s)','DiStreamerPersRevClient',3)
+				sentlist.append(fragn)
+			self.socket.sendall('list|'+str(len(list))+'\r\n'+list+'\r\n')
 			for sentn in sentlist:
-				if not sentn in locallist:
+				if not sentn in fkeys:
 					sentlist.remove(sentn)
 					self.logger.log('Removed from sent list: '+str(sentn),'DiStreamerPersRevClient',4)
-			self.socket.sendall(tosend)
 			time.sleep(self.config['interval'])
 		self.logger.log('DiStreamerPersRevClient terminated normally','DiStreamerPersRevClient',2)
 		
