@@ -40,6 +40,12 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
                     'fragmentsList':fragments.keys()
                     }))
                 return None
+            if config['requireurl']!='' and s.path!='/'+config['requireurl']:
+                s.send_response(403)
+                s.send_header('Server','DiStreamer')
+                s.end_headers()
+                s.wfile.write('Not authorized')
+                return None
             if len(fragments)<config['minfragments'] or store.getIcyInt()<0 or (store.getIcyInt()>0 and len(store.getIcyList().keys())==0):
                 s.send_response(404)
                 s.send_header('Server','DiStreamer')
@@ -134,7 +140,8 @@ class ShoutcastServer:
         return {
             'hostname': '0.0.0.0',
             'port': 8080,
-            'minfragments': 5
+            'minfragments': 5,
+            'requireurl': ''
         }
         
     def setConfig(self,config):
