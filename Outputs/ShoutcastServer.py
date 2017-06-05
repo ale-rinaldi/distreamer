@@ -69,6 +69,7 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
             locreconnect=reconnect
             icytitle=store.getIcyTitle()
             icyint=store.getIcyInt()
+            lastsenttime=int(time.time())
             firstsent=False
             if icyint>0:
                 if icytitle!='':
@@ -91,12 +92,18 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
                             s.wfile.write(fragments[fragn][icyblkmin:])
                             sentlist.append(fragn)
                             firstsent=True
+                            lastsenttime=int(time.time())
                             break
                         else:
                             sentlist.append(fragn)
-                        time.sleep(0.5)
                         if lisclosing[0]:
                             break
+                    if firstsent or lisclosing[0]:
+                        break
+                    time.sleep(0.5)
+                    if int(time.time())-lastsenttime>config['timeout'] and config['timeout']>0:
+                        logger.log('Timeout reached while waiting for first send. Closing stream to client.','ShoutcastServer',2)
+                        return None
             else:
                 lastsent=min(fragments.keys())-1
             while not lisclosing[0]:
@@ -119,8 +126,13 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
                     if not sentn in locallist:
                         sentlist.remove(sentn)
                         logger.log('Removed from sent list: '+str(sentn),'ShoutcastServer',4)
-                s.wfile.write(tosend)
+                if len(tosend)>0:
+                    s.wfile.write(tosend)
+                    lastsenttime=int(time.time())
                 time.sleep(1)
+                if int(time.time())-lastsenttime>config['timeout'] and config['timeout']>0:
+                    logger.log('Timeout reached. Closing stream to client.','ShoutcastServer',2)
+                    return None
         def log_message(self, format, *args):
             return
         
@@ -141,7 +153,8 @@ class ShoutcastServer:
             'hostname': '0.0.0.0',
             'port': 8080,
             'minfragments': 5,
-            'requireurl': ''
+            'requireurl': '',
+            'timeout': 30
         }
         
     def setConfig(self,config):
