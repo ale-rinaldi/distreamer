@@ -37,7 +37,8 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
                 s.end_headers()
                 s.wfile.write(json.dumps({
                     'connectedClients':statmgr.get(),
-                    'fragmentsList':fragments.keys()
+                    'fragmentsList':fragments.keys(),
+                    'storeAge': int(time.time())-store.getLastUpdate()
                     }))
                 return None
             if config['requireurl']!='' and s.path!='/'+config['requireurl']:
