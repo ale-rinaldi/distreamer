@@ -12,6 +12,136 @@ class ShoutcastServerStatsManager():
     def get(self):
         return self.counter
 
+class ShoutcastServerFragsManager:
+
+    # Initializes the class
+    def __init__(self, store, logger, config):
+        self.store = store
+        self.logger = logger
+        self.config = config
+        # Fragments are passed by reference
+        self.fragments = store.getFragments()
+        # Local list
+        self.loclist=[]
+        self.reconn=-1
+        # Set variables for current fragment and position inside the fragment itself
+        self.currfrag=-1
+        self.currpos=0
+
+    # Initializes the parameters on first call only
+    def initialize(self):
+        # Set the local source generation
+        self.reconn=self.store.getSourceGen()
+        # Get the first and the last available fragment
+        firstfragment = min(self.loclist)
+        lastfragment = max(self.loclist)
+        # Calculate the fragment to start with, depending on the minfragments setting
+        if self.config['minfragments'] > 0:
+            # Calculate the current fragment so that we exactly have a number of fragments to stream equal to minfragments
+            currfrag = lastfragment - self.config['minfragments'] +1
+            # If the calculated current fragment does not exist, fall back to the first one
+            if not currfrag in self.loclist:
+                currfrag=firstfragment
+        # If minfragments is not set, always use the first one
+        else:
+            currfrag = firstfragment
+        self.currfrag = currfrag
+
+    # Update the local fragments list and check integrity with the store
+    def updateLocalList(self):
+        # Update the local fragments list
+        self.loclist = self.fragments.keys()
+        self.loclist.sort()
+        # Initialize if this is the first call
+        if self.reconn < 0:
+            self.initialize()
+        # If the local source gen is different than the store one, stop
+        if self.store.getSourceGen() != self.reconn:
+            self.logger.log('Local source gen: '+str(self.reconn)+', source gen: '+str(self.store.getSourceGen()),'ShoutcastServer',2)
+            return False
+        # If the current fragment is already out of the store, close
+        if self.currfrag < min(self.loclist):
+            self.logger.log('Current fragment '+str(self.currfrag)+' is lower than the first fragment in the store '+str(min(self.loclist)),'ShoutcastServer',2)
+            return False
+        return True
+
+    # Gets a custom number of bytes from the stream. The function always returns the exact number of bytes, waiting for them if they're not available. It logs to the logger and returns False in case of error.
+    def getBytes(self, num):
+        tosend = ''
+        lastsendtime = int(time.time())
+        while len(tosend) < num:
+            if not self.updateLocalList():
+                self.logger.log('Got error in local list update','ShoutcastServer',2)
+                return False
+            # Detect a timeout
+            if int(time.time()) - lastsendtime > self.config['timeout'] and self.config['timeout']>0:
+                self.logger.log('Timeout reached','ShoutcastServer',2)
+            # If the current fragment is not yet in the store, wait redo all the cycle
+            if self.currfrag not in self.loclist:
+                time.sleep(1)
+                continue
+            # Calculate how many bytes we need to get
+            remaining = num - len(tosend)
+            # Calculate the length of the remaining part of the current fragment
+            fraglen = len(self.fragments[self.currfrag][self.currpos:])
+            # If the current fragment has enough bytes in it to satisfy the request, we're done
+            if fraglen >= remaining:
+                self.logger.log('Sending fragment ' + str(self.currfrag) + ' from byte ' + str(self.currpos) + ' to byte ' + str(self.currpos+remaining),'ShoutcastServer', 4)
+                # Extract the piece of fragment to send and concatenate it to tosend
+                tosend += self.fragments[self.currfrag][self.currpos:self.currpos+remaining]
+                # Increment the pointer
+                self.currpos += remaining
+                # If we are at the end of the fragment, move the pointer to the next one
+                if self.currpos == len(self.fragments[self.currfrag]):
+                    self.currfrag += 1
+                    self.currpos = 0
+                # Return
+                return tosend
+            # Else, append all the fragment to tosend and move the pointer to the next one
+            else:
+                self.logger.log('Sending fragment ' + str(self.currfrag) + ' from byte ' + str(self.currpos),'ShoutcastServer', 4)
+                tosend += self.fragments[self.currfrag][self.currpos:]
+                lastsendtime = int(time.time())
+                self.currfrag += 1
+                self.currpos = 0
+
+    # Gets all the available bytes from the stream. This function always returns immediately, if no new bytes are available it returns an empty string. It logs to the logger and returns False in case of error.
+    def getAll(self):
+        if not self.updateLocalList():
+            self.logger.log('Got error in local list update','ShoutcastServer',2)
+            return False
+        tosend = ''
+        while self.currfrag in self.loclist:
+            self.logger.log('Sending fragment ' + str(self.currfrag) + ' from byte ' + str(self.currpos),'ShoutcastServer', 4)
+            tosend += self.fragments[self.currfrag][self.currpos:]
+            self.currfrag += 1
+            self.currpos = 0
+        return tosend
+
+    # Moves the references to the beginning of the block after the next available metadata. All the data between the current position and the new position are lost. It logs to the logger and returns False in case of error.
+    def moveAfterNextMeta(self):
+        if not self.updateLocalList():
+            self.logger.log('Got error in local list update','ShoutcastServer',2)
+            return False
+        inittime = int(time.time())
+        while int(time.time())-inittime <= self.config['timeout'] or self.config['timeout']<=0:
+            icylist = self.store.getIcyList()
+            icykeys = icylist.keys()
+            icykeys.sort()
+            for key in icykeys:
+                if key < self.currfrag:
+                    continue
+                keylist = icylist[key]
+                keylist.sort()
+                for meta in keylist:
+                    if key > self.currfrag or ( key == self.currfrag and meta > self.currpos ):
+                        self.currfrag = key
+                        self.currpos = meta
+                        return True
+            time.sleep(1)
+        self.logger.log('Timeout reached','ShoutcastServer',2)
+        return False
+
 class ThreadingSimpleServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
     pass
 
@@ -73,108 +203,34 @@ def makeServerHandler(store,logger,config,lisclosing,statmgr):
                 s.send_header("icy-metaint", str(store.getIcyInt()))
             s.end_headers()
             # Get info from the store
-            sentlist=[]
-            locallist=fragments.keys()
-            locallist.sort()
-            # If set, use only the last MINFRAGMENTS fragments (consider the other ones as already sent)
-            if config['minfragments']>0:
-                excfragments=len(locallist)-config['minfragments']
-                if excfragments>0:
-                    sentlist=locallist[:excfragments]
-            # Memorize the current stream reconnection number
-            locreconnect=reconnect
             icytitle=store.getIcyTitle()
             icyint=store.getIcyInt()
-            # Let's start: we didn't send anything yet but we set a fake last sent time and last sent fragment to pass the checks the first time
+            # Create the fragments manager
+            fragsmanager = ShoutcastServerFragsManager(store, logger, config)
+            # Let's start: we didn't send anything yet but we set a fake last sent time to pass the timeout check the first time
             lastsenttime=int(time.time())
-            if len(sentlist)>0:
-                lastsent=max(sentlist)
-            else:
-                lastsent=min(locallist)-1
-            firstsent=False
             # If we are managing ICY title...
             if icyint>0:
-                # If we already have a title, let's immediately send it (preceded by a fake block with repeated character 255)
-                if icytitle!='':
-                    s.wfile.write(''.join(chr(255) for i in xrange(icyint)))
+                # Always start from after a title block
+                if not fragsmanager.moveAfterNextMeta():
+                    logger.log('Error returned from moveAfterNextMeta. Closing stream to client.','ShoutcastServer',2)
+                    return None
+                # If we already have a title, let's immediately send it after the first valid block
+                if icytitle != '':
+                    tosend = fragsmanager.getBytes(icyint)
+                    if not tosend:
+                        logger.log('Error returned from getBytes. Closing stream to client.','ShoutcastServer',2)
+                        return None
+                    s.wfile.write(tosend)
                     chridx=len(icytitle)/16
                     s.wfile.write(chr(chridx))
                     s.wfile.write(icytitle)
-                # Get the list of metadata blocks from the store
-                icylist=store.getIcyList()
-                # To keep the metadata sending in sync, we start streaming immediately after the first metadata block we have
-                while not firstsent:
-                    # Close the stream if the source has reconnected
-                    reconnect=store.getSourceGen()
-                    if locreconnect!=reconnect or reconnect<=0:
-                        logger.log('Local source gen: '+str(locreconnect)+', source gen: '+str(reconnect)+'. Closing stream to client.','ShoutcastServer',2)
-                        return None
-                    # Get the current fragments list
-                    locallist=fragments.keys()
-                    locallist.sort()
-                    # For each fragment...
-                    for fragn in locallist:
-                        # ... if we didn't already send it...
-                        if fragn not in sentlist:
-                            # If this block has a metadata in it, let's start from here (excluding the part before the metadata), else skip it considering it as sent
-                            if icylist.has_key(fragn):
-                                icyblkmin=min(icylist[fragn])
-                                # Close the stream if the fragment we have is not what we excepted to have!
-                                if fragn!=lastsent+1:
-                                    logger.log('Expected fragment: '+str(lastsent+1)+', first available: '+str(fragn)+'. Closing stream to client.','ShoutcastServer',2)
-                                    return None
-                                lastsent=fragn
-                                logger.log('Sent last part of fragment '+str(fragn)+' to client','ShoutcastServer',4)
-                                s.wfile.write(fragments[fragn][icyblkmin:])
-                                sentlist.append(fragn)
-                                firstsent=True
-                                lastsenttime=int(time.time())
-                                break
-                            else:
-                                if fragn!=lastsent+1:
-                                    logger.log('Expected fragment: '+str(lastsent+1)+', first available: '+str(fragn)+'. Closing stream to client.','ShoutcastServer',2)
-                                    return None
-                                lastsent=fragn
-                                sentlist.append(fragn)
-                            if lisclosing[0]:
-                                break
-                    if firstsent or lisclosing[0]:
-                        break
-                    time.sleep(0.5)
-                    # We waited too much for a fragment that never arrived. We give up.
-                    if int(time.time())-lastsenttime>config['timeout'] and config['timeout']>0:
-                        logger.log('Timeout reached while waiting for first send. Closing stream to client.','ShoutcastServer',2)
+                    if not fragsmanager.moveAfterNextMeta():
+                        logger.log('Error returned from moveAfterNextMeta. Closing stream to client.','ShoutcastServer',2)
                         return None
             # Ok we initialized everything. Now let's stream 'till the end of the world!
             while not lisclosing[0]:
-                # Close the stream if the source has reconnected
-                reconnect=store.getSourceGen()
-                if locreconnect!=reconnect or reconnect<=0:
-                    logger.log('Local source gen: '+str(locreconnect)+', source gen: '+str(reconnect)+'. Closing stream to client.','ShoutcastServer',2)
-                    return None
-                # We put everything we have to send in this big variable and we write to the socket only at the end. Otherwise, if the write takes too much time, the store situation may change in the middle! Too hard to handle it!
-                tosend=''
-                # Get the current fragments list
-                locallist=fragments.keys()
-                locallist.sort()
-                # For each fragment...
-                for fragn in locallist:
-                    # ... if we didn't already send it...
-                    if fragn not in sentlist:
-                        # Close the stream if the fragment we have is not what we excepted to have!
-                        if fragn!=lastsent+1:
-                            logger.log('Expected fragment: '+str(lastsent+1)+', first available: '+str(fragn)+'. Closing stream to client.','ShoutcastServer',2)
-                            return None
-                        # Add the fragment to that big tosend variable and consider it as sent
-                        lastsent=fragn
-                        tosend=tosend+fragments[fragn]
-                        logger.log('Sent fragment '+str(fragn)+' to client','ShoutcastServer',4)
-                        sentlist.append(fragn)
-                # Memory cleanup: if a fragment is not in the store anymore, we have no reason to keep it in the sent list
-                for sentn in sentlist:
-                    if not sentn in locallist:
-                        sentlist.remove(sentn)
-                        logger.log('Removed from sent list: '+str(sentn),'ShoutcastServer',4)
+                tosend = fragsmanager.getAll()
                 # If we have something to write to the socket... well, we write
                 if len(tosend)>0:
                     s.wfile.write(tosend)
