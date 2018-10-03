@@ -8,7 +8,7 @@ In this case, we run DiStreamer on PC A with ShoutcastClient as INPUT and DiStre
 On PC B we'll have DiStreamer running with DiStreamerClient as INPUT and ShoutcastServer as OUTPUT. The INPUT gets the fragments from DiStreamer Server on PC A, and the OUTPUT emulates a ShoutCast server the audio player will connect to.
 If PC A or B loose network connectivity for less than the total buffer time, no one will notice it. PC B can even change IP without any problem!
 
-There are various other INPUT and OUTPUT modules to use in the near future, for example I'm working on a ShoutcastServer INPUT to avoid using ShoutCast at all, and on Reverse DiStreamer Server and Client to let a client push fragments to the server.
+There are various other INPUT and OUTPUT modules to use in the near future, for example there is a ShoutcastServer INPUT to avoid using ShoutCast at all, and a Reverse DiStreamer Server and Client to let a client push fragments to the server. Refer to `Inputs` and `Outputs` folders for a complete list of modules.
 If you have some good idea for an INPUT or OUTPUT module, and you like coding, PLEASE contribute!
 
 *WARNING*: this is pre-release software, so....... well, you already know it ;) write me if you have any issue and I'll be glad to help if I have time, but without any warranty.
