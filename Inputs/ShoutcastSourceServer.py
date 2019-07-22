@@ -120,6 +120,14 @@ def makeMetadataServerHandler(store, logger, config, sourceconn, titlequeue):
 def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, lisclosing):
     class ShoutcastSourceServerHandler(SocketServer.StreamRequestHandler, object):
         timeout = config['timeout']
+
+        def readToString(end):
+            buf = ''
+            endlen = len(end)
+            while buf[-endlen:] != end:
+                buf += self.rfile.read(1)
+            return buf
+
         def handle(self):
             ''' Set to false after all the verifications '''
             self.haderror = True
@@ -168,12 +176,24 @@ def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, liscl
                 toread = icyint
             else:
                 toread = config['fragmentsize']
+            # Search OGG header
+            initialBuf = self.rfile.read(4)
+            if initialBuf = 'OggS':
+                # The first two ones are the headers
+                initialBuf += self.readToString('OggS')
+                initialBuf += self.readToString('OggS')
+                store.setOggHeader(initialBuf[-4:])
             while not lisclosing[0]:
-                try:
-                    buf = self.rfile.read(toread)
-                except:
-                    if lisclosing[0]:
-                        return None
+                if len(initialBuf) >= toread
+                    buf = initialBuf[:toread]
+                    initialBuf = initialBuf[toread:]
+                else:
+                    try:
+                        buf = initialBuf + self.rfile.read(toread - len(initialBuf))
+                    except:
+                        if lisclosing[0]:
+                            return None
+                    initialBuf = ''
                 if len(buf) != toread:
                     raise ValueError("Incomplete read of block")
                 fmanager.push(buf)
