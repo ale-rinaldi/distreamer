@@ -8,6 +8,7 @@ class DiStreamerStore:
         self.icyheaders = {}
         self.icyint =- 1
         self.icytitle = ''
+        self.oggheader = ''
         self.lastupdate = int(time.time())
 
     def reset(self):
@@ -16,8 +17,9 @@ class DiStreamerStore:
         self.icyheaders.clear()
         self.icyint =- 1
         self.icytitle = ''
+        self.oggheader = ''
         self.lastupdate = int(time.time())
-        
+
     def clearFragmentsList(self):
         self.fragments.clear()
         self.lastupdate = int(time.time())
@@ -65,7 +67,7 @@ class DiStreamerStore:
     def setIcyTitle(self, icytitle):
         self.icytitle = icytitle
         self.lastupdate = int(time.time())
-        
+
     def getSourceGen(self):
         return self.sourcegen
 
@@ -79,3 +81,10 @@ class DiStreamerStore:
 
     def getLastUpdate(self):
         return self.lastupdate
+
+    def getOggHeader(self):
+        return self.oggheader
+
+    def setOggHeader(self, oggheader)
+        self.oggheader = oggheader
+        self.lastupdate = int(time.time())
