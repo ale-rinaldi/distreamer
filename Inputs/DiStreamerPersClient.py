@@ -124,6 +124,9 @@ class DiStreamerPersClient():
                     if(localfragn not in list):
                         del fragments[localfragn]
                         self.logger.log('Deleted fragment ' + str(localfragn), 'DiStreamerPersClient', 3)
+            elif action == 'oggheader':
+                self.logger.log('OGG headers received', 'DiStreamerPersClient', 4)
+                self.store.setOggHeader(content)
             else:
                 x =- 1
                 try:

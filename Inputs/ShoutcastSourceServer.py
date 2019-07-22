@@ -121,7 +121,7 @@ def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, liscl
     class ShoutcastSourceServerHandler(SocketServer.StreamRequestHandler, object):
         timeout = config['timeout']
 
-        def readToString(end):
+        def readToString(self, end):
             buf = ''
             endlen = len(end)
             while buf[-endlen:] != end:
@@ -153,6 +153,7 @@ def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, liscl
                     raise ValueError('Header too long')
                 header = lheader.strip()
                 if header == '':
+                    logger.log("Empty header line, stream is beginning", 'ShoutcastSourceServer', 4)
                     break
                 logger.log("Received header - " + header, 'ShoutcastSourceServer', 4)
                 seppos = header.find(':')
@@ -177,14 +178,19 @@ def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, liscl
             else:
                 toread = config['fragmentsize']
             # Search OGG header
-            initialBuf = self.rfile.read(4)
-            if initialBuf == 'OggS':
+            initialBuf = self.rfile.read(6)
+            # Handle the additional newline that some clients like Rocket Broadcaster erroneusly send
+            if initialBuf[:2] == "\r\n":
+                logger.log('Additional newline removed', 'ShoutcastSourceServer', 4)
+                initialBuf = initialBuf[2:]
+            if initialBuf.strip()[:4] == 'OggS':
+                logger.log('OGG format detected', 'ShoutcastSourceServer', 4)
                 # The first two ones are the headers
-                initialBuf += self.readToString('OggS')
-                initialBuf += self.readToString('OggS')
-                store.setOggHeader(initialBuf[-4:])
+                initialBuf = initialBuf + self.readToString('OggS')
+                initialBuf = initialBuf + self.readToString('OggS')
+                store.setOggHeader(initialBuf[:-4])
             while not lisclosing[0]:
-                if len(initialBuf) >= toread
+                if len(initialBuf) >= toread:
                     buf = initialBuf[:toread]
                     initialBuf = initialBuf[toread:]
                 else:

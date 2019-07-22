@@ -85,6 +85,6 @@ class DiStreamerStore:
     def getOggHeader(self):
         return self.oggheader
 
-    def setOggHeader(self, oggheader)
+    def setOggHeader(self, oggheader):
         self.oggheader = oggheader
         self.lastupdate = int(time.time())

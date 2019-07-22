@@ -87,8 +87,8 @@ class DiStreamerPersRevClient():
             })
 
             # OGG headers
-            if store.getOggHeader() != localoggheader:
-                localoggheader = store.getOggHeader()
+            if self.store.getOggHeader() != localoggheader:
+                localoggheader = self.store.getOggHeader()
                 self.socket.sendall('oggheader|' + str(len(localoggheader)) + '\r\n' + localoggheader + '\r\n')
 
             for fragn in fkeys:

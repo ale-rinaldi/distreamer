@@ -13,6 +13,16 @@ class ShoutcastServerStatsManager():
     def get(self):
         return self.counter
 
+class ShoutcastServerSendManager:
+
+    # Initialize the class
+    def __init__(self, wfile, icyint, icytitle):
+        self.wfile = wfile
+        self.icyint = icyint
+        self.remaining = icyint
+        self.icytitle = icytitle
+        self.firstsent = False
+
 class ShoutcastServerFragsManager:
 
     # Initializes the class
@@ -70,7 +80,7 @@ class ShoutcastServerFragsManager:
         return True
 
     # Gets a custom number of bytes from the stream. The function always returns the exact number of bytes, waiting for them if they're not available. It logs to the logger and returns False in case of error.
-    def getBytes(self, num):
+    def getBytes(self, num, skiplog = False):
         tosend = ''
         lastsendtime = int(time.time())
         while len(tosend) < num:
@@ -90,7 +100,8 @@ class ShoutcastServerFragsManager:
             fraglen = len(self.fragments[self.currfrag][self.currpos:])
             # If the current fragment has enough bytes in it to satisfy the request, we're done
             if fraglen >= remaining:
-                self.logger.log('Sending fragment ' + str(self.currfrag) + ' from byte ' + str(self.currpos) + ' to byte ' + str(self.currpos + remaining),'ShoutcastServer', 4)
+                if not skiplog:
+                    self.logger.log('Sending fragment ' + str(self.currfrag) + ' from byte ' + str(self.currpos) + ' to byte ' + str(self.currpos + remaining),'ShoutcastServer', 4)
                 # Extract the piece of fragment to send and concatenate it to tosend
                 tosend += self.fragments[self.currfrag][self.currpos:self.currpos+remaining]
                 # Increment the pointer
@@ -123,11 +134,12 @@ class ShoutcastServerFragsManager:
         return tosend
 
     # Moves the references to the beginning of the block after the next available metadata. All the data between the current position and the new position are lost. It logs to the logger and returns False in case of error.
-    def moveAfterNextMeta(self):
+    def getToAfterNextMeta(self):
         if not self.updateLocalList():
             self.logger.log('Got error in local list update', 'ShoutcastServer', 2)
             return False
         inittime = int(time.time())
+        toret = ''
         while int(time.time())-inittime <= self.config['timeout'] or self.config['timeout'] <= 0:
             icylist = self.store.getIcyList()
             icykeys = icylist.keys()
@@ -138,13 +150,33 @@ class ShoutcastServerFragsManager:
                 keylist = icylist[key]
                 keylist.sort()
                 for meta in keylist:
-                    if key > self.currfrag or ( key == self.currfrag and meta > self.currpos ):
-                        self.currfrag = key
-                        self.currpos = meta
-                        return True
+                    if key > self.currfrag:
+                        toreadbytes = len(self.fragments[self.currfrag][self.currpos:])
+                        for frag in range(self.currfrag + 1, key):
+                            toreadbytes += len(self.fragments[frag])
+                        toreadbytes += len(self.fragments[key][:meta])
+                        return self.getBytes(toreadbytes)
+                    elif key == self.currfrag and meta >= self.currpos:
+                        toreadbytes = meta - self.currpos
+                        return self.getBytes(toreadbytes)
             time.sleep(1)
         self.logger.log('Timeout reached','ShoutcastServer',2)
         return False
+
+    def getToAfterNextOGGHeader(self):
+        if not self.updateLocalList():
+            self.logger.log('Got error in local list update', 'ShoutcastServer', 2)
+            return False
+        inittime = int(time.time())
+        toret = ''
+        while int(time.time())-inittime <= self.config['timeout'] or self.config['timeout'] <= 0:
+            toret = toret + self.getBytes(1, True)
+            if toret[-4:] == "OggS":
+                return toret
+        self.logger.log('Timeout reached','ShoutcastServer',2)
+        return False
+
+
 
 class ThreadingSimpleServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
     pass
@@ -152,6 +184,27 @@ class ThreadingSimpleServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
 def makeServerHandler(store, logger, config, lisclosing, statmgr):
     class shoutcastServerHandler(BaseHTTPServer.BaseHTTPRequestHandler,object):
         statpages = ['/stats','/favicon.ico']
+
+        def generatePageSize(self, size):
+            toret = ''
+            while size > 255:
+                toret += chr(255)
+                size -= 255
+            toret += chr(size)
+            return toret
+            
+
+        def generateDummyOggPage(self, size, streamid):
+            toret = "OggS" + chr(0) * 10 + streamid + chr (1) + chr(0) * 2 + chr(1) + chr(0) * 4
+            pageSize = self.generatePageSize(size)
+            realPadSize = size - (27 + len(pageSize))
+            newPageSize = self.generatePageSize(realPadSize)
+            if len(pageSize) != len(newPageSize):
+                realPadSize = size - (27 + len(newPageSize))
+                newPageSize = self.generatePageSize(realPadSize)
+            toret += chr(len(newPageSize)) + newPageSize + chr(0) * realPadSize
+            return toret
+
         def do_HEAD(s):
             s.added = False
             s.send_response(200)
@@ -213,11 +266,33 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
             fragsmanager = ShoutcastServerFragsManager(store, logger, config)
             # Let's start: we didn't send anything yet but we set a fake last sent time to pass the timeout check the first time
             lastsenttime = int(time.time())
+
+            # Handle OGG headers
+            if store.getOggHeader() != "":
+                oggheader = store.getOggHeader()
+                if icyint > 0:
+                    while len(oggheader) > icyint:
+                        s.wfile.write(oggheader[:icyint])
+                        s.wfile.write(chr(0))
+                        oggheader = oggheader[icyint:]
+                    padding = icyint - len(oggheader)
+                    fragsmanager.getToAfterNextOGGHeader()
+                    headtoicy = 'OggS' + fragsmanager.getToAfterNextMeta()
+                    padding = padding - len(headtoicy) + 1
+                    while padding < 30:
+                        padding += icyint
+                    s.wfile.write(oggheader)
+                    logger.log('Generating a ' + str(padding) + ' byte dummy OGG page', 'ShoutcastServer', 4)
+                    s.wfile.write(s.generateDummyOggPage(padding, oggheader[14:18]))
+                    s.wfile.write(headtoicy)
+                else:
+                    s.wfile.write(oggheader)
+
             # If we are managing ICY title...
             if icyint > 0:
                 # Always start from after a title block
-                if not fragsmanager.moveAfterNextMeta():
-                    logger.log('Error returned from moveAfterNextMeta. Closing stream to client.', 'ShoutcastServer', 2)
+                if fragsmanager.getToAfterNextMeta() == False:
+                    logger.log('Error returned from getToAfterNextMeta. Closing stream to client.', 'ShoutcastServer', 2)
                     return None
                 # If we already have a title, let's immediately send it after the first valid block
                 if icytitle != '':
@@ -229,8 +304,8 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
                     chridx = len(icytitle) / 16
                     s.wfile.write(chr(chridx))
                     s.wfile.write(icytitle)
-                    if not fragsmanager.moveAfterNextMeta():
-                        logger.log('Error returned from moveAfterNextMeta. Closing stream to client.', 'ShoutcastServer', 2)
+                    if not fragsmanager.getToAfterNextMeta():
+                        logger.log('Error returned from getToAfterNextMeta. Closing stream to client.', 'ShoutcastServer', 2)
                         return None
             # Ok we initialized everything. Now let's stream 'till the end of the world!
             while not lisclosing[0]:

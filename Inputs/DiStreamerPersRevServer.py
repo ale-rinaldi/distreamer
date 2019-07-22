@@ -94,6 +94,7 @@ def makePersRevServerHandler(store, logger, config, actreq, lisclosing):
                             del fragments[localfragn]
                             logger.log('Deleted fragment ' + str(localfragn), 'DiStreamerPersRevServer', 3)
                 elif action == 'oggheader':
+                    logger.log('OGG headers received', 'DiStreamerPersClient', 4)
                     store.setOggHeader(content)
                 else:
                     x = -1
