@@ -178,7 +178,7 @@ def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, liscl
                 toread = config['fragmentsize']
             # Search OGG header
             initialBuf = self.rfile.read(4)
-            if initialBuf = 'OggS':
+            if initialBuf == 'OggS':
                 # The first two ones are the headers
                 initialBuf += self.readToString('OggS')
                 initialBuf += self.readToString('OggS')
