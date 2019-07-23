@@ -189,6 +189,7 @@ def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, liscl
                 initialBuf = initialBuf + self.readToString('OggS')
                 initialBuf = initialBuf + self.readToString('OggS')
                 store.setOggHeader(initialBuf[:-4])
+                initialBuf = 'OggS'
             while not lisclosing[0]:
                 if len(initialBuf) >= toread:
                     buf = initialBuf[:toread]

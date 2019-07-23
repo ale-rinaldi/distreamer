@@ -194,15 +194,18 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
             return toret
             
 
-        def generateDummyOggPage(self, size, streamid):
-            toret = "OggS" + chr(0) * 10 + streamid + chr (1) + chr(0) * 2 + chr(1) + chr(0) * 4
-            pageSize = self.generatePageSize(size)
-            realPadSize = size - (27 + len(pageSize))
-            newPageSize = self.generatePageSize(realPadSize)
-            if len(pageSize) != len(newPageSize):
-                realPadSize = size - (27 + len(newPageSize))
-                newPageSize = self.generatePageSize(realPadSize)
-            toret += chr(len(newPageSize)) + newPageSize + chr(0) * realPadSize
+        def generateDummyOggPages(self, size, streamid):
+            newsize = size
+            toret = ""
+            # To improve compatibility, we generate multiple pages no longer than 255 bytes (28 bytes of header and 227 bytes of dummy data)
+            # 283 = 255+28. 28 is the header size.
+            while newsize > 283:
+                # A 255 byte OGG page
+                toret += 'OggS' + chr(0) * 10 + streamid + chr(1) + chr(0) * 2 + chr(1) + chr(0) * 4 + chr(1) + chr(227) + chr(0) * 227
+                newsize -= 255
+            # Here we generate the last page size
+            newsize -= 28
+            toret += 'OggS' + chr(0) * 10 + streamid + chr(1) + chr(0) * 2 + chr(1) + chr(0) * 4 + chr(1) + chr(newsize) + chr(0) * newsize
             return toret
 
         def do_HEAD(s):
@@ -273,20 +276,24 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
                 if icyint > 0:
                     while len(oggheader) > icyint:
                         s.wfile.write(oggheader[:icyint])
-                        s.wfile.write(chr(0))
+                        chridx = len(icytitle) / 16
+                        s.wfile.write(chr(chridx))
+                        s.wfile.write(icytitle)
                         oggheader = oggheader[icyint:]
                     padding = icyint - len(oggheader)
                     fragsmanager.getToAfterNextOGGHeader()
                     headtoicy = 'OggS' + fragsmanager.getToAfterNextMeta()
                     padding = padding - len(headtoicy) + 1
-                    while padding < 30:
+                    while padding < 28:
                         padding += icyint
                     s.wfile.write(oggheader)
                     logger.log('Generating a ' + str(padding) + ' byte dummy OGG page', 'ShoutcastServer', 4)
-                    s.wfile.write(s.generateDummyOggPage(padding, oggheader[14:18]))
+                    s.wfile.write(s.generateDummyOggPages(padding, oggheader[14:18]))
                     s.wfile.write(headtoicy)
                 else:
                     s.wfile.write(oggheader)
+                    s.wfile.write('OggS')
+                    fragsmanager.getToAfterNextOGGHeader()
 
             # If we are managing ICY title...
             if icyint > 0:
