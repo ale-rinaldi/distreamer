@@ -83,6 +83,8 @@ class ShoutcastServerFragsManager:
     def getBytes(self, num, skiplog = False):
         tosend = ''
         lastsendtime = int(time.time())
+        if num == 0:
+            return ''
         while len(tosend) < num:
             # Detect a timeout
             if int(time.time()) - lastsendtime > self.config['timeout'] and self.config['timeout'] > 0:
@@ -133,8 +135,8 @@ class ShoutcastServerFragsManager:
             self.currpos = 0
         return tosend
 
-    # Moves the references to the beginning of the block after the next available metadata. All the data between the current position and the new position are lost. It logs to the logger and returns False in case of error.
-    def getToAfterNextMeta(self):
+    # Returns everything until the beginning of the next metadata block
+    def getToBeforeNextMeta(self):
         inittime = int(time.time())
         toret = ''
         while int(time.time())-inittime <= self.config['timeout'] or self.config['timeout'] <= 0:
@@ -159,6 +161,26 @@ class ShoutcastServerFragsManager:
             time.sleep(1)
         self.logger.log('Timeout reached','ShoutcastServer',2)
         return False
+
+    # Returns everything until the beginning of the block after the next available metadata.
+    def getToAfterNextMeta(self):
+        toret = self.getToBeforeNextMeta()
+        if toret == False:
+            self.logger.log('Error getting to before next meta', 'ShoutcastServer', 2)
+            return False
+        ordicylen = self.getBytes(1)
+        if not ordicylen:
+            self.logger.log('Incomplete read of metadata length', 'ShoutcastServer', 2)
+            return False
+        toret += ordicylen
+        icylen = ord(ordicylen) * 16
+        if icylen > 0:
+            title = self.getBytes(icylen)
+            if len(title) != icylen:
+                self.logger.log('Incomplete read of title', 'ShoutcastServer', 2)
+                return False
+            toret += title
+        return toret
 
     def getToAfterNextOGGHeader(self):
         inittime = int(time.time())
@@ -235,7 +257,6 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
                 s.wfile.write('No stream yet')
                 return None
             # If no icy is required, but we have it, discard the request
-            print s.headers.get('Icy-MetaData')
             if not s.headers.get('Icy-MetaData') and store.getIcyInt() > 0:
                 s.send_response(500)
                 s.end_headers()
@@ -276,46 +297,50 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
                         oggheader = oggheader[icyint:]
                     padding = icyint - len(oggheader)
                     fragsmanager.getToAfterNextOGGHeader()
-                    headtoicy = 'OggS' + fragsmanager.getToAfterNextMeta()
-                    padding = padding - len(headtoicy) + 1
+                    headtoicy = 'OggS' + fragsmanager.getToBeforeNextMeta()
+                    padding = padding - len(headtoicy)
                     originalPadding = padding
+                    # TODO: this must be handled better to fix negative padding
                     while padding < 28:
                         padding += icyint
                     s.wfile.write(oggheader)
                     logger.log('Generating a ' + str(padding) + ' byte dummy OGG page', 'ShoutcastServer', 4)
                     paddingPages = s.generateDummyOggPages(padding, oggheader[14:18])
                     if padding > originalPadding:
-                        s.wfile.write(paddingPages[:originalPadding] + chr(0))
+                        s.wfile.write(paddingPages[:originalPadding])
+                        chridx = len(icytitle) / 16
+                        s.wfile.write(chr(chridx))
+                        s.wfile.write(icytitle)
                         paddingPages = paddingPages[originalPadding:]
                         while len(paddingPages) > icyint:
-                            s.wfile.write(paddingPages[:icyint] + chr(0))
+                            s.wfile.write(paddingPages[:icyint])
+                            chridx = len(icytitle) / 16
+                            s.wfile.write(chr(chridx))
+                            s.wfile.write(icytitle)
                             paddingPages = paddingPages[icyint:]
                     s.wfile.write(paddingPages)
                     s.wfile.write(headtoicy)
+                    s.wfile.write(fragsmanager.getToAfterNextMeta())
                 else:
                     s.wfile.write(oggheader)
                     s.wfile.write('OggS')
                     fragsmanager.getToAfterNextOGGHeader()
 
-            # If we are managing ICY title...
+            # If we are managing ICY title and the hard work hasn't already be done by the OGG handler...
             if icyint > 0:
                 # Always start from after a title block
-                if fragsmanager.getToAfterNextMeta() == False:
+                toNextMeta = fragsmanager.getToBeforeNextMeta()
+                if toNextMeta == False:
+                    logger.log('Error returned from getToBeforeNextMeta. Closing stream to client.', 'ShoutcastServer', 2)
+                    return None
+                s.wfile.write(toNextMeta)
+                # Let's immediately send a title after the first valid block
+                chridx = len(icytitle) / 16
+                s.wfile.write(chr(chridx))
+                s.wfile.write(icytitle)
+                if not fragsmanager.getToAfterNextMeta():
                     logger.log('Error returned from getToAfterNextMeta. Closing stream to client.', 'ShoutcastServer', 2)
                     return None
-                # If we already have a title, let's immediately send it after the first valid block
-                if icytitle != '':
-                    tosend = fragsmanager.getBytes(icyint)
-                    if not tosend:
-                        logger.log('Error returned from getBytes. Closing stream to client.', 'ShoutcastServer', 2)
-                        return None
-                    s.wfile.write(tosend)
-                    chridx = len(icytitle) / 16
-                    s.wfile.write(chr(chridx))
-                    s.wfile.write(icytitle)
-                    if not fragsmanager.getToAfterNextMeta():
-                        logger.log('Error returned from getToAfterNextMeta. Closing stream to client.', 'ShoutcastServer', 2)
-                        return None
             # Ok we initialized everything. Now let's stream 'till the end of the world!
             while not lisclosing[0]:
                 tosend = fragsmanager.getAll()
