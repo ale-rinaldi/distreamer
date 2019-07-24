@@ -84,9 +84,6 @@ class ShoutcastServerFragsManager:
         tosend = ''
         lastsendtime = int(time.time())
         while len(tosend) < num:
-            if not self.updateLocalList():
-                self.logger.log('Got error in local list update','ShoutcastServer',2)
-                return False
             # Detect a timeout
             if int(time.time()) - lastsendtime > self.config['timeout'] and self.config['timeout'] > 0:
                 self.logger.log('Timeout reached','ShoutcastServer',2)
@@ -122,9 +119,12 @@ class ShoutcastServerFragsManager:
 
     # Gets all the available bytes from the stream. This function always returns immediately, if no new bytes are available it returns an empty string. It logs to the logger and returns False in case of error.
     def getAll(self):
+<<<<<<< HEAD
         if not self.updateLocalList():
             self.logger.log('Got error in local list update', 'ShoutcastServer', 2)
             return ''
+=======
+>>>>>>> Fix Winamp compatibility
         tosend = ''
         while self.currfrag in self.loclist:
             self.logger.log('Sending fragment ' + str(self.currfrag) + ' from byte ' + str(self.currpos), 'ShoutcastServer', 4)
@@ -135,9 +135,6 @@ class ShoutcastServerFragsManager:
 
     # Moves the references to the beginning of the block after the next available metadata. All the data between the current position and the new position are lost. It logs to the logger and returns False in case of error.
     def getToAfterNextMeta(self):
-        if not self.updateLocalList():
-            self.logger.log('Got error in local list update', 'ShoutcastServer', 2)
-            return False
         inittime = int(time.time())
         toret = ''
         while int(time.time())-inittime <= self.config['timeout'] or self.config['timeout'] <= 0:
@@ -164,9 +161,6 @@ class ShoutcastServerFragsManager:
         return False
 
     def getToAfterNextOGGHeader(self):
-        if not self.updateLocalList():
-            self.logger.log('Got error in local list update', 'ShoutcastServer', 2)
-            return False
         inittime = int(time.time())
         toret = ''
         while int(time.time())-inittime <= self.config['timeout'] or self.config['timeout'] <= 0:
@@ -249,6 +243,13 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
                 s.end_headers()
                 s.wfile.write('No stream yet')
                 return None
+            # If no icy is required, but we have it, discard the request
+            print s.headers.get('Icy-MetaData')
+            if not s.headers.get('Icy-MetaData') and store.getIcyInt() > 0:
+                s.send_response(500)
+                s.end_headers()
+                s.wfile.write('You must require Icy-MetaData')
+                return None
             # Alright, we go!
             s.send_response(200)
             s.send_header('Server','DiStreamer')
@@ -267,9 +268,11 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
             icyint = store.getIcyInt()
             # Create the fragments manager
             fragsmanager = ShoutcastServerFragsManager(store, logger, config)
+            if not fragsmanager.updateLocalList():
+                self.logger.log('Got error in local list update','ShoutcastServer',2)
+                return False
             # Let's start: we didn't send anything yet but we set a fake last sent time to pass the timeout check the first time
             lastsenttime = int(time.time())
-
             # Handle OGG headers
             if store.getOggHeader() != "":
                 oggheader = store.getOggHeader()
@@ -327,6 +330,9 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
                 if int(time.time()) - lastsenttime > config['timeout'] and config['timeout'] > 0:
                     logger.log('Timeout reached. Closing stream to client.', 'ShoutcastServer', 2)
                     return None
+                if not fragsmanager.updateLocalList():
+                    self.logger.log('Got error in local list update','ShoutcastServer',2)
+                    return False
         def log_message(self, format, *args):
             return
 
