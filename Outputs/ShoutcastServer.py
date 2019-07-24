@@ -179,15 +179,6 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
     class shoutcastServerHandler(BaseHTTPServer.BaseHTTPRequestHandler,object):
         statpages = ['/stats','/favicon.ico']
 
-        def generatePageSize(self, size):
-            toret = ''
-            while size > 255:
-                toret += chr(255)
-                size -= 255
-            toret += chr(size)
-            return toret
-            
-
         def generateDummyOggPages(self, size, streamid):
             newsize = size
             toret = ""
@@ -211,7 +202,7 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
                 s.send_header(header,icyheaders[header])
             if(store.getIcyInt() > 0):
                 s.send_header("icy-metaint", str(store.getIcyInt()))
-                
+
         def do_GET(s):
             # The stream has not been added to the counter yet
             s.added = False
@@ -287,11 +278,19 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
                     fragsmanager.getToAfterNextOGGHeader()
                     headtoicy = 'OggS' + fragsmanager.getToAfterNextMeta()
                     padding = padding - len(headtoicy) + 1
+                    originalPadding = padding
                     while padding < 28:
                         padding += icyint
                     s.wfile.write(oggheader)
                     logger.log('Generating a ' + str(padding) + ' byte dummy OGG page', 'ShoutcastServer', 4)
-                    s.wfile.write(s.generateDummyOggPages(padding, oggheader[14:18]))
+                    paddingPages = s.generateDummyOggPages(padding, oggheader[14:18])
+                    if padding > originalPadding:
+                        s.wfile.write(paddingPages[:originalPadding] + chr(0))
+                        paddingPages = paddingPages[originalPadding:]
+                        while len(paddingPages) > icyint:
+                            s.wfile.write(paddingPages[:icyint] + chr(0))
+                            paddingPages = paddingPages[icyint:]
+                    s.wfile.write(paddingPages)
                     s.wfile.write(headtoicy)
                 else:
                     s.wfile.write(oggheader)

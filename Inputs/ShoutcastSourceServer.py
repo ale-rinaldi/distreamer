@@ -209,9 +209,9 @@ def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, liscl
                     if len(title) > 0:
                         store.setIcyTitle(title)
                     chridx = len(title) / 16
+                    fmanager.setIcyPos()
                     fmanager.push(chr(chridx))
                     fmanager.push(title)
-                    fmanager.setIcyPos()
                     if title != '':
                         store.setIcyTitle(title)
         def finish(self):
