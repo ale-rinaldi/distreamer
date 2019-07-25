@@ -298,9 +298,8 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
                     padding = icyint - len(oggheader)
                     fragsmanager.getToAfterNextOGGHeader()
                     headtoicy = 'OggS' + fragsmanager.getToBeforeNextMeta()
-                    padding = padding - len(headtoicy)
                     originalPadding = padding
-                    # TODO: this must be handled better to fix negative padding
+                    padding = padding - len(headtoicy)
                     while padding < 28:
                         padding += icyint
                     s.wfile.write(oggheader)
@@ -328,6 +327,9 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
 
             # If we are managing ICY title and the hard work hasn't already be done by the OGG handler...
             if icyint > 0:
+                # Align to after the next meta if the OGG handler hasn't already done it
+                if store.getOggHeader() == '':
+                    fragsmanager.getToAfterNextMeta()
                 # Always start from after a title block
                 toNextMeta = fragsmanager.getToBeforeNextMeta()
                 if toNextMeta == False:
