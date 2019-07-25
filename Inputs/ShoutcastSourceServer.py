@@ -141,15 +141,15 @@ def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, liscl
             while True:
                 headerscount += 1
                 if headerscount > 100:
-                    s.close()
+                    self.close()
                     raise ValueError('Too many headers received')
                 lheader = self.rfile.readline(65537)
                 ''' The real Shoutcast Server closes connection with the source after it receives the first header if another source is already connected, so let's keep this strange behaviour '''
                 if sourceconn.get():
-                    s.close()
+                    self.close()
                     return None
                 if len(lheader) > 65536:
-                    s.close()
+                    self.close()
                     raise ValueError('Header too long')
                 header = lheader.strip()
                 if header == '':
