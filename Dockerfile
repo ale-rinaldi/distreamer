@@ -3,8 +3,8 @@ FROM python:2.7-alpine
 RUN apk add --no-cache esh && \
     addgroup -S distreamer && \
     adduser -S distreamer -G distreamer && \
-    mkdir /distreamer && \
-    chown distreamer:distreamer /distreamer
+    mkdir /distreamer /distreamer/conf && \
+    chown -R distreamer:distreamer /distreamer
 
 COPY distreamer.py /distreamer
 COPY /General /distreamer/General
@@ -16,4 +16,5 @@ COPY docker/distreamer.conf.esh /distreamer/distreamer.conf.esh
 USER distreamer
 WORKDIR /distreamer
 ENTRYPOINT [ "/entrypoint.sh" ]
-CMD [ "python", "distreamer.py" ]
+VOLUME /distreamer/conf
+CMD [ "python", "distreamer.py", "conf/distreamer.conf" ]

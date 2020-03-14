@@ -32,6 +32,7 @@ OUTPUTLEVEL=1
 
 A full list of all the available options, with some commends about what they do, can be found in the `distreamer.template.conf` in the GitHub repository.
 
+Alternatively, you can mount a directory containing a `distreamer.conf` file into `/distreamer/conf`. This way, the config file won't be generated from the environment variables.
 
 ## Without docker
 The file to run is distreamer.py and it accepts only one argument: a path to a configuration file. If no path is given, it will use "distreamer.conf" in the current directory.
