@@ -14,6 +14,26 @@ If you have some good idea for an INPUT or OUTPUT module, and you like coding, P
 *WARNING*: as usual, in the open source world, this software is offered without any warranty. Feel free to write me if you have any issue and I'll be glad to help if I can.
 
 # Usage
+Unfortunately there is not much documentation about how to use DiStreamer at the moment: the project was born to be used internally in our radio station ([Radio 2.0 - Bergamo in aria](https://www.radioduepuntozero.it)), and I didn't put so much effort in documenting it. My fault, sorry. If you're brave enough, you can try to figure out how it works by reading the `distreamer.template.conf` file, it has some comments that might help.
+
+If you're really interested in running DiStreamer and you need some hints to get started, just contact me or open a issue, I'll be glad to help!
+
+## Docker
+Docker is the recommended way to run DiStreamer. You can configure it using environment variables:
+- variables starting with `DS_GENERAL_` are put in the `GENERAL` configuation section
+- variables starting with `DS_INPUT_` are put in the `INPUT` configuration section
+- variables starting with `DS_OUTPUT_` are put in the `OUTPUT` configuration section
+
+For example, setting `DS_GENERAL_OUTPUTLEVEL=1` will produce:
+```ini
+[GENERAL]
+OUTPUTLEVEL=1
+```
+
+A full list of all the available options, with some commends about what they do, can be found in the `distreamer.template.conf` in the GitHub repository.
+
+
+## Without docker
 The file to run is distreamer.py and it accepts only one argument: a path to a configuration file. If no path is given, it will use "distreamer.conf" in the current directory.
 So, to use DiStreamer you just:
 - Install Python 2.7
