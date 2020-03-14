@@ -1,0 +1,11 @@
+[GENERAL]
+<% if [ "${DS_GENERAL_LOGFILE:-}" = "" ]; then %>
+LOGFILE=/dev/null
+<% fi %>
+<% env | grep -E "^DS_GENERAL_" | cut -c 12- %>
+
+[INPUT]
+<% env | grep -E "^DS_INPUT_" | cut -c 10- %>
+
+[OUTPUT]
+<% env | grep -E "^DS_OUTPUT_" | cut -c 11- %>
