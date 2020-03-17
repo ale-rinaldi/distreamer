@@ -16,5 +16,4 @@ COPY docker/distreamer.conf.esh /distreamer/distreamer.conf.esh
 USER distreamer
 WORKDIR /distreamer
 ENTRYPOINT [ "/entrypoint.sh" ]
-VOLUME /distreamer/conf
 CMD [ "python", "distreamer.py", "conf/distreamer.conf" ]

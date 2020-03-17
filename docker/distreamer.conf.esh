@@ -1,11 +1,24 @@
 [GENERAL]
-<% if [ "${DS_GENERAL_LOGFILE:-}" = "" ]; then %>
+<% if [ "${DS_GENERAL_LOGFILE:-}" = "" ]; then -%>
 LOGFILE=/dev/null
-<% fi %>
-<% env | grep -E "^DS_GENERAL_" | cut -c 12- %>
+<% fi -%>
+
+<%
+if [ "$(env | grep -E "^DS_GENERAL_")" != "" ]; then
+    env | grep -E "^DS_GENERAL_" | cut -c 12-
+fi
+-%>
 
 [INPUT]
-<% env | grep -E "^DS_INPUT_" | cut -c 10- %>
+<%
+if [ "$(env | grep -E "^DS_INPUT_")" != "" ]; then
+    env | grep -E "^DS_INPUT_" | cut -c 10-
+fi
+-%>
 
 [OUTPUT]
-<% env | grep -E "^DS_OUTPUT_" | cut -c 11- %>
+<%
+if [ "$(env | grep -E "^DS_OUTPUT_")" != "" ]; then
+    env | grep -E "^DS_OUTPUT_" | cut -c 11-
+fi
+-%>
