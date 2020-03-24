@@ -51,7 +51,7 @@ class ShoutcastServerFragsManager:
     # Update the local fragments list and check integrity with the store
     def updateLocalList(self):
         # If there are no fragments in the store, probably we're in the middle of an input restart. Keep everything as it is
-        if len(self.fragments) == 0:
+        if len(self.fragments) == 0 or self.store.getSourceGen() == 0:
             return True
         # Update the local fragments list
         self.loclist = self.fragments.keys()
