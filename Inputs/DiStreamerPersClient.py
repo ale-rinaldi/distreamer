@@ -20,10 +20,13 @@ class DiStreamerPersClient():
         self.logger.log('Connecting to ' + server + ' on port ' + str(port), 'DiStreamerPersClient', 4)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.IPPROTO_IP, socket.IP_TOS, 0x40)
-        s.setblocking(1)
+        # Set the timeout a first time for the connection
+        s.settimeout(timeout)
         s.connect((server, port))
+        s.setblocking(1)
         self.logger.log('Connected', 'DiStreamerPersClient', 4)
         f = s.makefile()
+        # Set the timeout again after setting blocking mode
         s.settimeout(timeout)
         s.sendall('GET ' + u.path +  ' HTTP/1.1\r\n')
         s.sendall('\r\n')
