@@ -50,6 +50,9 @@ class ShoutcastServerFragsManager:
 
     # Update the local fragments list and check integrity with the store
     def updateLocalList(self):
+        # If there are no fragments in the store, probably we're in the middle of an input restart. Keep everything as it is
+        if len(self.fragments) == 0:
+            return True
         # Update the local fragments list
         self.loclist = self.fragments.keys()
         self.loclist.sort()
@@ -110,7 +113,7 @@ class ShoutcastServerFragsManager:
     def getAll(self):
         if not self.updateLocalList():
             self.logger.log('Got error in local list update', 'ShoutcastServer', 2)
-            return False
+            return ''
         tosend = ''
         while self.currfrag in self.loclist:
             self.logger.log('Sending fragment ' + str(self.currfrag) + ' from byte ' + str(self.currpos), 'ShoutcastServer', 4)
