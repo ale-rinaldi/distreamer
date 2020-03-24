@@ -19,6 +19,7 @@ class DiStreamerPersClient():
             port = 80
         self.logger.log('Connecting to ' + server + ' on port ' + str(port), 'DiStreamerPersClient', 4)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.IPPROTO_IP, socket.IP_TOS, 0x40)
         s.setblocking(1)
         s.connect((server, port))
         self.logger.log('Connected', 'DiStreamerPersClient', 4)

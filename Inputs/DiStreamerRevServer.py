@@ -1,5 +1,6 @@
 import BaseHTTPServer,json
 from SocketServer import ThreadingMixIn
+import socket
 
 class ThreadingSimpleServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
     pass
@@ -162,6 +163,7 @@ class DiStreamerRevServer:
             return None
         handler = makeServerHandler(self.store, self.logger, self.config)
         self.httpd = ThreadingSimpleServer((self.config['hostname'], self.config['port']), handler)
+        self.httpd.socket.setsockopt(socket.IPPROTO_IP, socket.IP_TOS, 0x40)
         self.logger.log('Started', 'DiStreamerRevServer', 2)
         try:
             self.httpd.serve_forever()
