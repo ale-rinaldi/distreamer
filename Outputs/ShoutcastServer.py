@@ -61,7 +61,11 @@ class ShoutcastServerFragsManager:
     # Update the local fragments list and check integrity with the store
     def updateLocalList(self):
         # If there are no fragments in the store, probably we're in the middle of an input restart. Keep everything as it is
+<<<<<<< HEAD
         if len(self.fragments) == 0 or self.store.getSourceGen() == 0:
+=======
+        if len(self.fragments) == 0:
+>>>>>>> Fix ShoutCast output on empty store
             return True
         # Update the local fragments list
         self.loclist = self.fragments.keys()
@@ -357,7 +361,7 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
                     logger.log('Timeout reached. Closing stream to client.', 'ShoutcastServer', 2)
                     return None
                 if not fragsmanager.updateLocalList():
-                    self.logger.log('Got error in local list update','ShoutcastServer',2)
+                    logger.log('Got error in local list update','ShoutcastServer',2)
                     return False
         def log_message(self, format, *args):
             return
