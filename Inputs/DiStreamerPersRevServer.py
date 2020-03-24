@@ -1,4 +1,5 @@
 import BaseHTTPServer, json, threading, urlparse, SocketServer
+import socket
 
 class SourceServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     pass
@@ -134,6 +135,7 @@ class DiStreamerPersRevServer:
         actreq = persRevServerActiveRequestManager()
         srvhandler = makePersRevServerHandler(self.store, self.logger, self.config, actreq, self.lisclosing)
         self.srv = SourceServer((self.config['hostname'], self.config['port']), srvhandler)
+        self.srv.socket.setsockopt(socket.IPPROTO_IP, socket.IP_TOS, 0x40)
         self.logger.log('Server initialized', 'DiStreamerPersRevServer', 2)
         try:
             self.srv.serve_forever()

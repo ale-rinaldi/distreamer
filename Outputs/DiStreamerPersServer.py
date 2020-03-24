@@ -1,6 +1,7 @@
 import BaseHTTPServer
 import time,json
 from SocketServer import ThreadingMixIn
+import socket
 
 class DiStreamerPersServerStatsManager():
     def __init__(self):
@@ -115,6 +116,7 @@ class DiStreamerPersServer:
         statmgr=DiStreamerPersServerStatsManager()
         handler=makeServerHandler(self.store, self.logger, self.config, self.lisclosing, statmgr)
         self.httpd = ThreadingSimpleServer((self.config['hostname'], self.config['port']), handler)
+        self.httpd.socket.setsockopt(socket.IPPROTO_IP, socket.IP_TOS, 0x40)
         self.logger.log('Started', 'DiStreamerPersServer', 2)
         try:
             self.httpd.serve_forever()

@@ -1,4 +1,5 @@
 import BaseHTTPServer, json, threading, urlparse, SocketServer
+import socket
 
 class SourceServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     pass
@@ -241,10 +242,12 @@ class ShoutcastSourceServer:
         titlequeue = ShoutcastSourceServerTitleQueue()
         metadatahandler = makeMetadataServerHandler(self.store, self.logger, self.config, sourceconn, titlequeue)
         metadataserver = MetadataServer((self.config['hostname'], self.config['port']), metadatahandler)
+        metadataserver.socket.setsockopt(socket.IPPROTO_IP, socket.IP_TOS, 0x40)
         self.metadatathread = MetadataServerThread(metadataserver, self.logger, self.lisclosing)
         self.logger.log('Metadata server initialized', 'ShoutcastSourceServer', 2)
         sourcehandler = makeSourceServerHandler(self.store, self.logger, self.config, sourceconn, titlequeue, self.lisclosing)
         self.sourceserver = SourceServer((self.config['hostname'], self.config['port'] + 1), sourcehandler)
+        self.sourceserver.socket.setsockopt(socket.IPPROTO_IP, socket.IP_TOS, 0x40)
         self.logger.log('Source server initialized', 'ShoutcastSourceServer', 2)
         self.metadatathread.start()
         try:
