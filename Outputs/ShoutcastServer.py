@@ -61,11 +61,7 @@ class ShoutcastServerFragsManager:
     # Update the local fragments list and check integrity with the store
     def updateLocalList(self):
         # If there are no fragments in the store, probably we're in the middle of an input restart. Keep everything as it is
-<<<<<<< HEAD
         if len(self.fragments) == 0 or self.store.getSourceGen() == 0:
-=======
-        if len(self.fragments) == 0:
->>>>>>> Fix ShoutCast output on empty store
             return True
         # Update the local fragments list
         self.loclist = self.fragments.keys()
@@ -125,12 +121,9 @@ class ShoutcastServerFragsManager:
 
     # Gets all the available bytes from the stream. This function always returns immediately, if no new bytes are available it returns an empty string. It logs to the logger and returns False in case of error.
     def getAll(self):
-<<<<<<< HEAD
         if not self.updateLocalList():
             self.logger.log('Got error in local list update', 'ShoutcastServer', 2)
             return ''
-=======
->>>>>>> Fix Winamp compatibility
         tosend = ''
         while self.currfrag in self.loclist:
             self.logger.log('Sending fragment ' + str(self.currfrag) + ' from byte ' + str(self.currpos), 'ShoutcastServer', 4)

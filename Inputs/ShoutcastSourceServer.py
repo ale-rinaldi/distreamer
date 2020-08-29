@@ -1,5 +1,6 @@
 import BaseHTTPServer, json, threading, urlparse, SocketServer
 import socket
+from datetime import datetime
 
 class SourceServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     pass
@@ -21,13 +22,17 @@ class ShoutcastSourceServerTitleQueue:
         self.reset()
     def add(self,title):
         self.queue.append(title)
+        self.current = title
     def get(self):
         if len(self.queue) > 0:
             return self.queue.pop(0)
         else:
             return ''
+    def getCurrent(self):
+        return self.current
     def reset(self):
         self.queue = []
+        self.current = ''
 
 class ShoutcastSourceServerFragmentsManager:
     def __init__(self, store, logger, config):
@@ -88,21 +93,13 @@ def makeMetadataServerHandler(store, logger, config, sourceconn, titlequeue):
                 s.send_response(404)
                 s.send_header('Server', 'DiStreamer')
 
-        def formatTitle(s, song):
-            formtitle = 'StreamTitle=\'' + song + '\';'
-            if len(formtitle) > 4080:
-                raise ValueError('Title too long')
-            while len(formtitle) % 16 != 0:
-                formtitle += '\0'
-            return formtitle
-
         def do_GET(s):
             path = urlparse.urlparse('http://distreamer' + s.path).path
             if path == '/admin.cgi' and sourceconn.get():
                 if config['icyint'] > 0:
                     params = urlparse.parse_qs(urlparse.urlparse('http://distreamer' + s.path).query)
                     if params['mode'][0] == 'updinfo' and params['pass'][0] == config['password']:
-                        titlequeue.add(s.formatTitle(params['song'][0]))
+                        titlequeue.add(params['song'][0])
             elif path == '/stats':
                 s.send_response(200)
                 s.send_header('Server','DiStreamer')
@@ -120,6 +117,19 @@ def makeMetadataServerHandler(store, logger, config, sourceconn, titlequeue):
 def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, lisclosing):
     class ShoutcastSourceServerHandler(SocketServer.StreamRequestHandler, object):
         timeout = config['timeout']
+
+        def getTimestamp(self):
+            return round((datetime.utcnow() - datetime(1970, 1, 1)).total_seconds(), 2)
+
+        def formatTitle(s, song):
+            if song == '':
+                return ''
+            formtitle = 'StreamTitle=\'' + song + '\';'
+            if len(formtitle) > 4080:
+                raise ValueError('Title too long')
+            while len(formtitle) % 16 != 0:
+                formtitle += '\0'
+            return formtitle
 
         def readToString(self, end):
             buf = ''
@@ -190,6 +200,9 @@ def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, liscl
                 initialBuf = initialBuf + self.readToString('OggS')
                 store.setOggHeader(initialBuf[:-4])
                 initialBuf = 'OggS'
+            # Set the initial time for the time key insertion
+            lastTimekey = 0
+            # Start receiving fragments
             while not lisclosing[0]:
                 if len(initialBuf) >= toread:
                     buf = initialBuf[:toread]
@@ -205,15 +218,23 @@ def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, liscl
                     raise ValueError("Incomplete read of block")
                 fmanager.push(buf)
                 if icyint > 0:
-                    title = titlequeue.get()
-                    if len(title) > 0:
-                        store.setIcyTitle(title)
-                    chridx = len(title) / 16
+                    # If no timekey is required, just add the title if there's a new one
+                    if config['timekeyinterval'] < 0:
+                        title = titlequeue.get()
+                    else:
+                        newTitle = titlequeue.get()
+                        lastTitle = titlequeue.getCurrent()
+                        if newTitle != "" or self.getTimestamp() - lastTimekey > config['timekeyinterval']:
+                            title = lastTitle + ' {' + str(self.getTimestamp()) + '}'
+                        else:
+                            title = ""
+                    formattedTitle = self.formatTitle(title)
+                    chridx = len(formattedTitle) / 16
                     fmanager.setIcyPos()
                     fmanager.push(chr(chridx))
-                    fmanager.push(title)
-                    if title != '':
-                        store.setIcyTitle(title)
+                    fmanager.push(formattedTitle)
+                    if formattedTitle != '':
+                        store.setIcyTitle(formattedTitle)
         def finish(self):
             if not self.haderror:
                 titlequeue.reset()
@@ -254,7 +275,8 @@ class ShoutcastSourceServer:
             'fragmentsnumber': 5,
             'fragmentsize': 81920,
             'timeout': 5,
-            'icyint': 8192
+            'icyint': 8192,
+            'timekeyinterval': -1,
         }
 
     def setConfig(self,config):
