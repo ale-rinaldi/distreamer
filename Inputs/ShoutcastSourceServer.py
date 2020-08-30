@@ -214,6 +214,7 @@ def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, liscl
                         if lisclosing[0]:
                             return None
                     initialBuf = ''
+                logger.log('Read ' + str(len(buf)) + ' bytes', 'ShoutcastSourceServer', 4)
                 if len(buf) != toread:
                     raise ValueError("Incomplete read of block")
                 fmanager.push(buf)
@@ -226,6 +227,7 @@ def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, liscl
                         lastTitle = titlequeue.getCurrent()
                         if newTitle != "" or self.getTimestamp() - lastTimekey > config['timekeyinterval']:
                             title = lastTitle + ' {' + str(self.getTimestamp()) + '}'
+                            lastTimekey = self.getTimestamp()
                         else:
                             title = ""
                     formattedTitle = self.formatTitle(title)
@@ -276,7 +278,7 @@ class ShoutcastSourceServer:
             'fragmentsize': 81920,
             'timeout': 5,
             'icyint': 8192,
-            'timekeyinterval': -1,
+            'timekeyinterval': -1.0,
         }
 
     def setConfig(self,config):

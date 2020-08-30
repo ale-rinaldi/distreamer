@@ -25,6 +25,8 @@ class DiStreamerConfig:
             if genconfig.has_key(key):
                 if type(defaults[key]) is int:
                     newval = int(genconfig[key])
+                elif type(defaults[key]) is float:
+                    newval = float(inconfig[key])
                 elif type(defaults[key]) is bool:
                     newval = self.str2bool(genconfig[key])
                 else:
@@ -41,6 +43,8 @@ class DiStreamerConfig:
             if inconfig.has_key(key):
                 if type(defaults[key]) is int:
                     newval = int(inconfig[key])
+                elif type(defaults[key]) is float:
+                    newval = float(inconfig[key])
                 elif type(defaults[key]) is bool:
                     newval = self.str2bool(inconfig[key])
                 else:
@@ -55,6 +59,8 @@ class DiStreamerConfig:
             if outconfig.has_key(key):
                 if type(defaults[key]) is int:
                     newval = int(outconfig[key])
+                elif type(defaults[key]) is float:
+                    newval = float(inconfig[key])
                 elif type(defaults[key]) is bool:
                     newval = self.str2bool(outconfig[key])
                 else:
