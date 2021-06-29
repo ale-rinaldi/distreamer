@@ -80,6 +80,7 @@ class ShoutcastServerFragsManager:
             # Detect a timeout
             if int(time.time()) - lastsendtime > self.config['timeout'] and self.config['timeout'] > 0:
                 self.logger.log('Timeout reached','ShoutcastServer',2)
+                return False
             # If the current fragment is not yet in the store, wait redo all the cycle
             if self.currfrag not in self.loclist:
                 time.sleep(1)
