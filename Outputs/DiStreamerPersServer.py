@@ -53,7 +53,7 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
                 lastsent = min(fragments.keys()) - 1
             else:
                 lastsent = 0
-            localoggheader = ''
+            localoggheader = None
             while not lisclosing[0]:
                 tosend = ''
                 locallist = fragments.keys()
