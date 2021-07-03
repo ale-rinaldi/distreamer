@@ -1,5 +1,6 @@
 import BaseHTTPServer, json, threading, urlparse, SocketServer
 import socket
+from datetime import datetime
 
 class SourceServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     pass
@@ -21,13 +22,17 @@ class ShoutcastSourceServerTitleQueue:
         self.reset()
     def add(self,title):
         self.queue.append(title)
+        self.current = title
     def get(self):
         if len(self.queue) > 0:
             return self.queue.pop(0)
         else:
             return ''
+    def getCurrent(self):
+        return self.current
     def reset(self):
         self.queue = []
+        self.current = ''
 
 class ShoutcastSourceServerFragmentsManager:
     def __init__(self, store, logger, config):
@@ -88,21 +93,13 @@ def makeMetadataServerHandler(store, logger, config, sourceconn, titlequeue):
                 s.send_response(404)
                 s.send_header('Server', 'DiStreamer')
 
-        def formatTitle(s, song):
-            formtitle = 'StreamTitle=\'' + song + '\';'
-            if len(formtitle) > 4080:
-                raise ValueError('Title too long')
-            while len(formtitle) % 16 != 0:
-                formtitle += '\0'
-            return formtitle
-
         def do_GET(s):
             path = urlparse.urlparse('http://distreamer' + s.path).path
             if path == '/admin.cgi' and sourceconn.get():
                 if config['icyint'] > 0:
                     params = urlparse.parse_qs(urlparse.urlparse('http://distreamer' + s.path).query)
                     if params['mode'][0] == 'updinfo' and params['pass'][0] == config['password']:
-                        titlequeue.add(s.formatTitle(params['song'][0]))
+                        titlequeue.add(params['song'][0])
             elif path == '/stats':
                 s.send_response(200)
                 s.send_header('Server','DiStreamer')
@@ -120,6 +117,27 @@ def makeMetadataServerHandler(store, logger, config, sourceconn, titlequeue):
 def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, lisclosing):
     class ShoutcastSourceServerHandler(SocketServer.StreamRequestHandler, object):
         timeout = config['timeout']
+
+        def getTimestamp(self):
+            return round((datetime.utcnow() - datetime(1970, 1, 1)).total_seconds(), 2)
+
+        def formatTitle(s, song):
+            if song == '':
+                return ''
+            formtitle = 'StreamTitle=\'' + song + '\';'
+            if len(formtitle) > 4080:
+                raise ValueError('Title too long')
+            while len(formtitle) % 16 != 0:
+                formtitle += '\0'
+            return formtitle
+
+        def readToString(self, end):
+            buf = ''
+            endlen = len(end)
+            while buf[-endlen:] != end:
+                buf += self.rfile.read(1)
+            return buf
+
         def handle(self):
             ''' Set to false after all the verifications '''
             self.haderror = True
@@ -133,18 +151,19 @@ def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, liscl
             while True:
                 headerscount += 1
                 if headerscount > 100:
-                    s.close()
+                    self.close()
                     raise ValueError('Too many headers received')
                 lheader = self.rfile.readline(65537)
                 ''' The real Shoutcast Server closes connection with the source after it receives the first header if another source is already connected, so let's keep this strange behaviour '''
                 if sourceconn.get():
-                    s.close()
+                    self.close()
                     return None
                 if len(lheader) > 65536:
-                    s.close()
+                    self.close()
                     raise ValueError('Header too long')
                 header = lheader.strip()
                 if header == '':
+                    logger.log("Empty header line, stream is beginning", 'ShoutcastSourceServer', 4)
                     break
                 logger.log("Received header - " + header, 'ShoutcastSourceServer', 4)
                 seppos = header.find(':')
@@ -168,25 +187,56 @@ def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, liscl
                 toread = icyint
             else:
                 toread = config['fragmentsize']
+            # Search OGG header
+            initialBuf = self.rfile.read(6)
+            # Handle the additional newline that some clients like Rocket Broadcaster erroneusly send
+            if initialBuf[:2] == "\r\n":
+                logger.log('Additional newline removed', 'ShoutcastSourceServer', 4)
+                initialBuf = initialBuf[2:]
+            if initialBuf.strip()[:4] == 'OggS':
+                logger.log('OGG format detected', 'ShoutcastSourceServer', 4)
+                # The first two ones are the headers
+                initialBuf = initialBuf + self.readToString('OggS')
+                initialBuf = initialBuf + self.readToString('OggS')
+                store.setOggHeader(initialBuf[:-4])
+                initialBuf = 'OggS'
+            # Set the initial time for the time key insertion
+            lastTimekey = 0
+            # Start receiving fragments
             while not lisclosing[0]:
-                try:
-                    buf = self.rfile.read(toread)
-                except:
-                    if lisclosing[0]:
-                        return None
+                if len(initialBuf) >= toread:
+                    buf = initialBuf[:toread]
+                    initialBuf = initialBuf[toread:]
+                else:
+                    try:
+                        buf = initialBuf + self.rfile.read(toread - len(initialBuf))
+                    except:
+                        if lisclosing[0]:
+                            return None
+                    initialBuf = ''
+                logger.log('Read ' + str(len(buf)) + ' bytes', 'ShoutcastSourceServer', 4)
                 if len(buf) != toread:
                     raise ValueError("Incomplete read of block")
                 fmanager.push(buf)
                 if icyint > 0:
-                    title = titlequeue.get()
-                    if len(title) > 0:
-                        store.setIcyTitle(title)
-                    chridx = len(title) / 16
-                    fmanager.push(chr(chridx))
-                    fmanager.push(title)
+                    # If no timekey is required, just add the title if there's a new one
+                    if config['timekeyinterval'] < 0:
+                        title = titlequeue.get()
+                    else:
+                        newTitle = titlequeue.get()
+                        lastTitle = titlequeue.getCurrent()
+                        if newTitle != "" or self.getTimestamp() - lastTimekey > config['timekeyinterval']:
+                            title = lastTitle + ' {' + str(self.getTimestamp()) + '}'
+                            lastTimekey = self.getTimestamp()
+                        else:
+                            title = ""
+                    formattedTitle = self.formatTitle(title)
+                    chridx = len(formattedTitle) / 16
                     fmanager.setIcyPos()
-                    if title != '':
-                        store.setIcyTitle(title)
+                    fmanager.push(chr(chridx))
+                    fmanager.push(formattedTitle)
+                    if formattedTitle != '':
+                        store.setIcyTitle(formattedTitle)
         def finish(self):
             if not self.haderror:
                 titlequeue.reset()
@@ -227,7 +277,8 @@ class ShoutcastSourceServer:
             'fragmentsnumber': 5,
             'fragmentsize': 81920,
             'timeout': 5,
-            'icyint': 8192
+            'icyint': 8192,
+            'timekeyinterval': -1.0,
         }
 
     def setConfig(self,config):

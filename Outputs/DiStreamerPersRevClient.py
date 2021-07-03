@@ -33,7 +33,7 @@ class DiStreamerPersRevClient():
         self.socket = s
         self.socketfile = f
         return f
-        
+
     def getDefaultConfig(self):
         return {
             'serverurl': '',
@@ -41,7 +41,7 @@ class DiStreamerPersRevClient():
             'timeout': 5,
             'interval': 1
         }
-    
+
     def setConfig(self, config):
         self.config = config
         self.config_set = True
@@ -56,7 +56,7 @@ class DiStreamerPersRevClient():
             return None
 
         self.logger.log('Started', 'DiStreamerPersRevClient', 2)
-        
+
         stream = self._PersRevServerConnect(self.config['serverurl'] + '/', self.config['timeout'])
         self.socket.sendall(self.config['password'] + '\r\n')
         ans = stream.readline()
@@ -72,6 +72,7 @@ class DiStreamerPersRevClient():
             lastsent = min(fragments.keys()) - 1
         else:
             lastsent = 0
+        localoggheader = ""
         while not self.isclosing:
             localfrags = {}
             fkeys = fragments.keys()
@@ -84,6 +85,12 @@ class DiStreamerPersRevClient():
                 'icytitle': self.store.getIcyTitle().encode('base64'),
                 'sourcegen': self.store.getSourceGen()
             })
+
+            # OGG headers
+            if self.store.getOggHeader() != localoggheader:
+                localoggheader = self.store.getOggHeader()
+                self.socket.sendall('oggheader|' + str(len(localoggheader)) + '\r\n' + localoggheader + '\r\n')
+
             for fragn in fkeys:
                 if self.isclosing:
                     break
@@ -116,7 +123,7 @@ class DiStreamerPersRevClient():
                     self.logger.log('Removed from sent list: ' + str(sentn), 'DiStreamerPersRevClient', 4)
             time.sleep(self.config['interval'])
         self.logger.log('DiStreamerPersRevClient terminated normally', 'DiStreamerPersRevClient', 2)
-        
+
     def close(self):
         self.isclosing = True
         self.logger.log('DiStreamerPersRevClient is terminating, this could need some time', 'DiStreamerPersRevClient', 2)

@@ -18,7 +18,7 @@ class persRevServerActiveRequestManager:
 def makePersRevServerHandler(store, logger, config, actreq, lisclosing):
     class DiStreamerPersRevServerHandler(SocketServer.StreamRequestHandler, object):
         timeout = config['timeout']
-        
+
         def keysToInt(s, dictionary):
             ''' THANKS!!! http://stackoverflow.com/questions/1254454/fastest-way-to-convert-a-dicts-keys-values-from-unicode-to-str '''
             if not isinstance(dictionary, dict):
@@ -93,6 +93,9 @@ def makePersRevServerHandler(store, logger, config, actreq, lisclosing):
                         if(localfragn not in list):
                             del fragments[localfragn]
                             logger.log('Deleted fragment ' + str(localfragn), 'DiStreamerPersRevServer', 3)
+                elif action == 'oggheader':
+                    logger.log('OGG headers received', 'DiStreamerPersClient', 4)
+                    store.setOggHeader(content)
                 else:
                     x = -1
                     try:

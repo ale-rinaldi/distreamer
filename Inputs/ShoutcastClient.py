@@ -170,6 +170,7 @@ class ShoutcastClient():
             fmanager.push(buf)
             buf = ''
             if icyint > 0:
+                fmanager.setIcyPos()
                 ordicylen = stream.read(1)
                 fmanager.push(ordicylen)
                 icylen = ord(ordicylen) * 16
@@ -184,7 +185,6 @@ class ShoutcastClient():
                         return None
                     self.store.setIcyTitle(title)
                     fmanager.push(title)
-                fmanager.setIcyPos()
         self.logger.log('ShoutcastClient terminated normally', 'ShoutcastClient', 2)
 
     def close(self):

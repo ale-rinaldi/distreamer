@@ -53,6 +53,7 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
                 lastsent = min(fragments.keys()) - 1
             else:
                 lastsent = 0
+            localoggheader = None
             while not lisclosing[0]:
                 tosend = ''
                 locallist = fragments.keys()
@@ -65,6 +66,12 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
                     'icytitle': store.getIcyTitle().encode('base64'),
                     'sourcegen': store.getSourceGen()
                 })
+
+                # OGG headers
+                if store.getOggHeader() != localoggheader:
+                    localoggheader = store.getOggHeader()
+                    s.wfile.write('oggheader|' + str(len(localoggheader)) + '\r\n' + localoggheader + '\r\n')
+
                 for fragn in locallist:
                     if fragn not in sentlist:
                         if fragn != lastsent + 1:
