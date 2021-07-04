@@ -72,7 +72,7 @@ class DiStreamerPersRevClient():
             lastsent = min(fragments.keys()) - 1
         else:
             lastsent = 0
-        localoggheader = ""
+        localoggheader = None
         while not self.isclosing:
             localfrags = {}
             fkeys = fragments.keys()
