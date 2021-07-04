@@ -119,7 +119,7 @@ def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, liscl
         timeout = config['timeout']
 
         def getTimestamp(self):
-            return round((datetime.utcnow() - datetime(1970, 1, 1)).total_seconds(), 2)
+            return (datetime.utcnow() - datetime(1970, 1, 1)).total_seconds()
 
         def formatTitle(s, song):
             if song == '':
@@ -226,7 +226,7 @@ def makeSourceServerHandler(store, logger, config, sourceconn, titlequeue, liscl
                         newTitle = titlequeue.get()
                         lastTitle = titlequeue.getCurrent()
                         if newTitle != "" or self.getTimestamp() - lastTimekey > config['timekeyinterval']:
-                            title = lastTitle + ' {' + str(self.getTimestamp()) + '}'
+                            title = lastTitle + ' {' + '{:.3f}'.format(self.getTimestamp()) + '}'
                             lastTimekey = self.getTimestamp()
                         else:
                             title = ""
