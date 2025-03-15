@@ -1,6 +1,6 @@
-import BaseHTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import time,json
-from SocketServer import ThreadingMixIn
+from socketserver import ThreadingMixIn
 import socket
 
 class ShoutcastServerStatsManager():
@@ -192,11 +192,11 @@ class ShoutcastServerFragsManager:
 
 
 
-class ThreadingSimpleServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
+class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
     pass
 
 def makeServerHandler(store, logger, config, lisclosing, statmgr):
-    class shoutcastServerHandler(BaseHTTPServer.BaseHTTPRequestHandler,object):
+    class shoutcastServerHandler(BaseHTTPRequestHandler,object):
         statpages = ['/stats','/favicon.ico']
 
         def generateDummyOggPages(self, size, streamid):
@@ -213,7 +213,7 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
             toret += 'OggS' + chr(0) * 10 + streamid + chr(1) + chr(0) * 2 + chr(1) + chr(0) * 4 + chr(1) + chr(newsize) + chr(0) * newsize
             return toret
 
-        def do_HEAD(s):
+        def do_HEAD(self, s):
             s.added = False
             s.send_response(200)
             s.send_header("Server", "DiStreamer")
@@ -223,7 +223,7 @@ def makeServerHandler(store, logger, config, lisclosing, statmgr):
             if(store.getIcyInt() > 0):
                 s.send_header("icy-metaint", str(store.getIcyInt()))
 
-        def do_GET(s):
+        def do_GET(self, s):
             # The stream has not been added to the counter yet
             s.added = False
             # Get stream information from the store
@@ -371,6 +371,7 @@ class ShoutcastServer:
         self.store = store
         self.logger = logger
         self.config_set = False
+        self.httpd = None
 
     def getDefaultConfig(self):
         return {

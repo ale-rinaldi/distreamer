@@ -1,2 +1,4 @@
 /distreamer.conf
 *.pyc
+*.log
+.DS_Store

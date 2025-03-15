@@ -30,7 +30,7 @@ def makeServerHandler(store, logger, config):
                 s.send_header("Content-Type", "text/plain")
             else:
                 key = int(s.path[1:])
-                if s.store.getFragments().has_key(key):
+                if key in s.store.getFragments():
                     s.send_response(200)
                     s.send_header("Server", "DiStreamer")
                 else:
@@ -75,7 +75,7 @@ def makeServerHandler(store, logger, config):
                     key = int(path)
                 except:
                     pass
-                if key >= 0 and s.store.getFragments().has_key(key):
+                if key >= 0 and key in s.store.getFragments():
                     fragment = s.store.getFragments()[key]
                     s.send_response(200)
                     s.send_header("Server", "DiStreamer")

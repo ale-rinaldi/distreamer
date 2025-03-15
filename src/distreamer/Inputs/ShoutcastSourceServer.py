@@ -66,13 +66,13 @@ class ShoutcastSourceServerFragmentsManager:
         while len(fragments) > self.config['fragmentsnumber']:
             todelete = min(fragments.keys())
             del fragments[todelete]
-            if icylist.has_key(todelete):
+            if todelete in icylist:
                 del icylist[todelete]
             self.logger.log("Deleted fragment " + str(todelete), 'ShoutcastSourceServer', 3)
         self.store.setIcyList(icylist)
     def setIcyPos(self):
         icylist = self.store.getIcyList()
-        if not icylist.has_key(self.fragcounter):
+        if self.fragcounter not in icylist:
             icylist[self.fragcounter] = []
         icylist[self.fragcounter].append(self.poscounter)
         self.store.setIcyList(icylist)

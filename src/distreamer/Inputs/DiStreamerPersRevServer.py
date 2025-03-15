@@ -1,10 +1,8 @@
-import BaseHTTPServer, json, threading, urlparse, SocketServer
+import json
 import socket
+from socketserver import ThreadingMixIn, TCPServer, StreamRequestHandler
 
-class SourceServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
-    pass
-
-class MetadataServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
+class SourceServer(ThreadingMixIn, TCPServer):
     pass
 
 class persRevServerActiveRequestManager:
@@ -16,7 +14,7 @@ class persRevServerActiveRequestManager:
         return self.object
 
 def makePersRevServerHandler(store, logger, config, actreq, lisclosing):
-    class DiStreamerPersRevServerHandler(SocketServer.StreamRequestHandler, object):
+    class DiStreamerPersRevServerHandler(StreamRequestHandler, object):
         timeout = config['timeout']
 
         def keysToInt(s, dictionary):

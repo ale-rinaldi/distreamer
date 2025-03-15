@@ -14,14 +14,14 @@ class DiStreamerLogger:
         self.islogging = True
         fmtstring = str(time.asctime()) + ": [" + origin + "] " + string
         if level <= self.outputlevel:
-            print fmtstring
+            print(fmtstring)
         if level <= self.loglevel and not self.logerror:
             try:
                 file = open(self.logfile, 'a')
                 file.write(fmtstring + '\r\n')
                 file.close()
             except:
-                print "!!!WARNING!!! Cannot write to log file: " + self.logfile
+                print("!!!WARNING!!! Cannot write to log file:", self.logfile)
                 self.logerror = True
                 pass
         self.islogging = False

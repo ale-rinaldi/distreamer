@@ -1,0 +1,11 @@
+[project]
+name = "distreamer"
+version = "3.0.0"
+description = "A simple audio streaming solution that plays nicely with unstable connections."
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+distreamer = "distreamer.main:main"

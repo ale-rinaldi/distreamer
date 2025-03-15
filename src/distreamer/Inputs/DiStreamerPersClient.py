@@ -1,4 +1,6 @@
-import socket,urlparse,json
+import socket,json
+from base64 import b64decode
+from urllib.parse import urlparse
 
 class DiStreamerPersClient():
 
@@ -10,7 +12,7 @@ class DiStreamerPersClient():
         self.socket = None
 
     def _PersServerConnect(self, url, timeout):
-        u = urlparse.urlparse(url)
+        u = urlparse(url)
         server = u.netloc.split(':')[0]
         port =- 1
         if len(u.netloc.split(':')) > 1:
@@ -25,11 +27,11 @@ class DiStreamerPersClient():
         s.connect((server, port))
         s.setblocking(1)
         self.logger.log('Connected', 'DiStreamerPersClient', 4)
-        f = s.makefile()
+        f = s.makefile('rb')
         # Set the timeout again after setting blocking mode
         s.settimeout(timeout)
-        s.sendall('GET ' + u.path +  ' HTTP/1.1\r\n')
-        s.sendall('\r\n')
+        s.sendall(('GET ' + u.path +  ' HTTP/1.1\r\n').encode('utf-8'))
+        s.sendall(b'\r\n')
         self.socket = s
         self.socketfile = f
         return f
@@ -79,8 +81,8 @@ class DiStreamerPersClient():
                 else:
                     self.logger.log('Incomplete read of line', 'DiStreamerPersClient', 2)
                     return None
-            aline = info.split('|')
-            action = aline[0]
+            aline = info.split(b'|')
+            action = aline[0].decode('utf-8')
             try:
                 length = int(aline[1])
             except:
@@ -118,10 +120,11 @@ class DiStreamerPersClient():
                 self.store.setIcyList(self.keysToInt(infolist['icylist']))
                 self.store.setIcyHeaders(infolist['icyheaders'])
                 self.store.setSourceGen(infolist['sourcegen'])
-                self.store.setIcyTitle(infolist['icytitle'].decode('base64'))
-                list = infolist['fragmentslist']
-                for localfragn in fragments.keys():
-                    if(localfragn not in list):
+                self.store.setIcyTitle(b64decode(infolist['icytitle']))
+                fragments_list = infolist['fragmentslist']
+                local_list = list(fragments.keys())
+                for localfragn in local_list:
+                    if localfragn not in fragments_list:
                         del fragments[localfragn]
                         self.logger.log('Deleted fragment ' + str(localfragn), 'DiStreamerPersClient', 3)
             elif action == 'oggheader':

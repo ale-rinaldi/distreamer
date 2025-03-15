@@ -1,5 +1,5 @@
 import sys
-from ConfigParser import ConfigParser
+from configparser import ConfigParser
 
 class DiStreamerConfig:
     def __init__(self):
@@ -22,11 +22,11 @@ class DiStreamerConfig:
         }
         genconfig = dict(self.config.items('GENERAL'))
         for key in defaults:
-            if genconfig.has_key(key):
+            if key in genconfig:
                 if type(defaults[key]) is int:
                     newval = int(genconfig[key])
                 elif type(defaults[key]) is float:
-                    newval = float(inconfig[key])
+                    newval = float(genconfig[key])
                 elif type(defaults[key]) is bool:
                     newval = self.str2bool(genconfig[key])
                 else:
@@ -40,7 +40,7 @@ class DiStreamerConfig:
         inconfig=dict(self.config.items('INPUT'))
         del inconfig['mode']
         for key in defaults:
-            if inconfig.has_key(key):
+            if key in inconfig:
                 if type(defaults[key]) is int:
                     newval = int(inconfig[key])
                 elif type(defaults[key]) is float:
@@ -56,11 +56,11 @@ class DiStreamerConfig:
         outconfig = dict(self.config.items('OUTPUT'))
         del outconfig['mode']
         for key in defaults:
-            if outconfig.has_key(key):
+            if key in outconfig:
                 if type(defaults[key]) is int:
                     newval = int(outconfig[key])
                 elif type(defaults[key]) is float:
-                    newval = float(inconfig[key])
+                    newval = float(outconfig[key])
                 elif type(defaults[key]) is bool:
                     newval = self.str2bool(outconfig[key])
                 else:

@@ -55,7 +55,7 @@ class DiStreamerClient():
             for fragn in list:
                 if self.isclosing:
                     break
-                if (not(fragments.has_key(fragn)) or fragments[fragn] == ''):
+                if fragn not in fragments or fragments[fragn] == '':
                     self.logger.log('Requesting fragment ' + str(fragn), 'DiStreamerClient', 4)
                     if self.config['password']:
                         result = urllib2.urlopen(urllib2.Request(self.config['serverurl'] + '/' + str(fragn) + '/' + self.config['password'], headers = {'User-Agent':'DiStreamer'}), timeout = self.config['httptimeout'])
